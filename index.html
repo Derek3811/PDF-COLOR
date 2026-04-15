@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF AnalyzR</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Include pdf.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>PDF AnalyzR</h1>
+            <p>Smart, Client-Side PDF Intelligence</p>
+        </header>
+
+        <section class="drop-zone" id="dropZone">
+            <span class="icon">📁</span>
+            <p>Drag & Drop hundreds of PDFs here</p>
+            <sub class="helper-text">or click to browse</sub>
+            <input type="file" id="fileInput" multiple accept=".pdf" class="hidden">
+        </section>
+
+        <section class="controls">
+            <button id="btnTotalPages" class="btn primary" disabled>Get Total Pages</button>
+            <button id="btnColorPages" class="btn secondary" disabled>Detect Color Pages</button>
+            <button id="btnClear" class="btn ghost outline" disabled>Clear All</button>
+        </section>
+
+        <section class="summary hidden" id="summarySection">
+            <div class="summary-card">
+                <h3>Total Pages</h3>
+                <p id="sumTotalPages">0</p>
+            </div>
+            <div class="summary-card">
+                <h3>Total Color Pages</h3>
+                <p id="sumColorPages">0</p>
+            </div>
+            <div class="summary-card">
+                <h3>Color Pages (w/ Notes)</h3>
+                <p id="sumColorNotesPages">0</p>
+            </div>
+        </section>
+
+        <section class="results">
+            <table class="data-table hidden" id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>PDF Name</th>
+                        <th>Status</th>
+                        <th>Total Pages</th>
+                        <th>Color Pages</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                    <!-- Dynamic rows will be inserted here -->
+                </tbody>
+            </table>
+        </section>
+    </div>
+    
+    <script type="module" src="app.js"></script>
+</body>
+</html>
