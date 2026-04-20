@@ -265,14 +265,17 @@ async function processFiles(mode) {
                 }
                 
                 // 3. Grouping determination (Threshold) checking for block presence
-                if (yellowPixels > 30) {
-                    pageHasHighlight = true;
-                    hasHighlight = true;
-                }
-                
-                if (exhibitStickerPixels > 15) {
-                    pageHasExhibit = true;
-                    hasExhibit = true;
+                // Prevent noisy scanned photos (high unique bucket count) from falsely triggering simple pixel color blocks
+                if (uniqueColorBuckets.size < 200) {
+                    if (yellowPixels > 30) {
+                        pageHasHighlight = true;
+                        hasHighlight = true;
+                    }
+                    
+                    if (exhibitStickerPixels > 15) {
+                        pageHasExhibit = true;
+                        hasExhibit = true;
+                    }
                 }
                 
                 if (pageHasHighlight || pageHasExhibit) {
@@ -297,7 +300,7 @@ async function processFiles(mode) {
             job.colorPages = colorPages;
             
             const notesArray = [];
-            if (hasPhoto) notesArray.push('contains photo');
+            if (hasPhoto) notesArray.push('scanned with photo');
             if (hasGraphic) notesArray.push('contains graphic');
             if (hasChart) notesArray.push('contains chart');
             if (hasHighlight) notesArray.push('contains highlight');
