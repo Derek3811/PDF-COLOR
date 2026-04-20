@@ -132,15 +132,34 @@ async function processFiles(mode) {
             let hasPhoto = false;
             let hasGraphic = false;
             let hasHighlight = false;
+            let hasExhibit = false;
             let hasChart = false;
             
             for (let pageNum = 1; pageNum <= numPages; pageNum++) {
                 const page = await pdf.getPage(pageNum);
                 
-                // 1. Analyze Annotations
+                let pageHasHighlight = false;
+                let pageHasExhibit = false;
+                
+                // 1. Analyze Annotations & Text
                 const annotations = await page.getAnnotations();
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(i => i.str).join(' ').toLowerCase();
+
+                if (pageText.includes('exhibit')) {
+                    pageHasExhibit = true;
+                    hasExhibit = true;
+                }
+                
                 for (const ann of annotations) {
-                    if (ann.subtype === 'Highlight') hasHighlight = true;
+                    if (ann.subtype === 'Highlight') {
+                        pageHasHighlight = true;
+                        hasHighlight = true;
+                    }
+                    if (ann.contents && ann.contents.toLowerCase().includes('exhibit')) {
+                        pageHasExhibit = true;
+                        hasExhibit = true;
+                    }
                 }
                 
                 // 2. Analyze Operators
@@ -179,31 +198,85 @@ async function processFiles(mode) {
                 
                 let colorfulPixelCount = 0;
                 let uniqueColorBuckets = new Set();
+                let yellowPixels = 0;
+                let exhibitStickerPixels = 0;
                 
-                // Threshold 15 out of 255
-                for (let i = 0; i < imgData.length; i += 4) {
-                    if (imgData[i+3] > 10) { // Check alpha
-                        const r = imgData[i];
-                        const g = imgData[i+1];
-                        const b = imgData[i+2];
+                const w = canvas.width;
+                const h = canvas.height;
+                const top15 = Math.floor(h * 0.15);
+                const right20 = Math.floor(w * 0.80);
+                const bottom20 = Math.floor(h * 0.80);
+                
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const idx = (y * w + x) * 4;
+                        if (imgData[idx+3] < 10) continue; // Check alpha
+                        
+                        const r = imgData[idx];
+                        const g = imgData[idx+1];
+                        const b = imgData[idx+2];
                         
                         const maxCh = Math.max(r,g,b);
                         const minCh = Math.min(r,g,b);
+                        const diff = maxCh - minCh;
+                        
+                        // 1. Coordinate filtering: Skip top 15% (exclude logos)
+                        if (y < top15) continue;
                         
                         // Basic color page check
-                        if (maxCh - minCh > 15) {
+                        if (diff > 15) {
                             isColor = true;
                         }
                         
                         // Advanced heuristic for photograph detection
                         if (r < 240 || g < 240 || b < 240) { // Ignore white-ish background
-                            if (maxCh - minCh > 5) { // Ensure there is some localized color saturation
+                            if (diff > 5) { // Ensure there is some localized color saturation
                                 colorfulPixelCount++;
                                 const bucket = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
                                 uniqueColorBuckets.add(bucket);
                             }
                         }
+                        
+                        // 2. HSV pale yellow detection (Hue 45-65) even with low saturation
+                        if (diff > 5) { // Any measurable color difference
+                            let hue = 0;
+                            if (maxCh === r) {
+                                hue = (g - b) / diff;
+                            } else if (maxCh === g) {
+                                hue = 2.0 + (b - r) / diff;
+                            } else {
+                                hue = 4.0 + (r - g) / diff;
+                            }
+                            hue *= 60;
+                            if (hue < 0) hue += 360;
+                            
+                            if (hue >= 45 && hue <= 65) {
+                                yellowPixels++;
+                            }
+                        }
+                        
+                        // 4. Secondary deep scan on bottom-right 20% for exhibit stickers
+                        if (x >= right20 && y >= bottom20) {
+                            if (diff > 25) { // Distinct color marker in exhibit region
+                                exhibitStickerPixels++;
+                            }
+                        }
                     }
+                }
+                
+                // 3. Grouping determination (Threshold) checking for block presence
+                if (yellowPixels > 30) {
+                    pageHasHighlight = true;
+                    hasHighlight = true;
+                }
+                
+                if (exhibitStickerPixels > 15) {
+                    pageHasExhibit = true;
+                    hasExhibit = true;
+                }
+                
+                if (pageHasHighlight || pageHasExhibit) {
+                    isColor = true;
                 }
                 
                 if (isColor) colorPages++;
@@ -228,6 +301,7 @@ async function processFiles(mode) {
             if (hasGraphic) notesArray.push('contains graphic');
             if (hasChart) notesArray.push('contains chart');
             if (hasHighlight) notesArray.push('contains highlight');
+            if (hasExhibit) notesArray.push('exhibit sticker');
             job.note = notesArray.join(', ');
             
             job.status = 'done';
