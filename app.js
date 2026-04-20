@@ -197,6 +197,7 @@ async function processFiles(mode) {
                 let uniqueColorBuckets = new Set();
                 let yellowPixels = 0;
                 let exhibitStickerPixels = 0;
+                let genericColorPixels = 0;
                 
                 const w = canvas.width;
                 const h = canvas.height;
@@ -220,9 +221,9 @@ async function processFiles(mode) {
                         // 1. Coordinate filtering: Skip top 15% (exclude logos)
                         if (y < top15) continue;
                         
-                        // Basic color page check
+                        // Gather color mass
                         if (diff > 15) {
-                            isColor = true;
+                            genericColorPixels++;
                         }
                         
                         // Advanced heuristic for photograph detection
@@ -274,6 +275,12 @@ async function processFiles(mode) {
                 }
                 
                 if (pageHasHighlight || pageHasExhibit) {
+                    isColor = true;
+                }
+                
+                // Demand sufficient color mass to justify color printing (excludes tiny logos, colored bates stamps)
+                // 300 pixels at 0.2 scale (~1.5 sq inches text)
+                if (genericColorPixels > 300) {
                     isColor = true;
                 }
                 
