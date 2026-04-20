@@ -265,17 +265,15 @@ async function processFiles(mode) {
                 }
                 
                 // 3. Grouping determination (Threshold) checking for block presence
-                // Prevent noisy scanned photos (high unique bucket count) from falsely triggering simple pixel color blocks
-                if (uniqueColorBuckets.size < 200) {
-                    if (yellowPixels > 30) {
-                        pageHasHighlight = true;
-                        hasHighlight = true;
-                    }
-                    
-                    if (exhibitStickerPixels > 15) {
-                        pageHasExhibit = true;
-                        hasExhibit = true;
-                    }
+                // Require significant pixel mass to avoid scan noise (e.g., 250+ pixels = ~1 sq inch area)
+                if (yellowPixels > 250) {
+                    pageHasHighlight = true;
+                    hasHighlight = true;
+                }
+                
+                if (exhibitStickerPixels > 100) {
+                    pageHasExhibit = true;
+                    hasExhibit = true;
                 }
                 
                 if (pageHasHighlight || pageHasExhibit) {
@@ -285,10 +283,10 @@ async function processFiles(mode) {
                 if (isColor) colorPages++;
                 
                 if (pageHasImageOp && !hasPhoto) {
-                    // A "real photograph" must occupy a significant area and contain huge color diversity.
-                    // This naturally rejects logos, small graphical image icons, and simple gradients.
+                    // A "real photograph" or phone scan must contain significant noise and grouping.
                     const totalAreaPixels = canvas.width * canvas.height;
-                    if (colorfulPixelCount > (totalAreaPixels * 0.05) && uniqueColorBuckets.size > 200) {
+                    // Lowered thresholds to catch less saturated, noisy phone scans
+                    if (colorfulPixelCount > (totalAreaPixels * 0.02) && uniqueColorBuckets.size > 50) {
                         hasPhoto = true;
                     }
                 }
@@ -300,11 +298,14 @@ async function processFiles(mode) {
             job.colorPages = colorPages;
             
             const notesArray = [];
-            if (hasPhoto) notesArray.push('scanned with photo');
-            if (hasGraphic) notesArray.push('contains graphic');
-            if (hasChart) notesArray.push('contains chart');
-            if (hasHighlight) notesArray.push('contains highlight');
-            if (hasExhibit) notesArray.push('exhibit sticker');
+            if (hasPhoto) {
+                notesArray.push('scanned with photo');
+            } else {
+                if (hasGraphic) notesArray.push('contains graphic');
+                if (hasChart) notesArray.push('contains chart');
+                if (hasHighlight) notesArray.push('contains highlight');
+                if (hasExhibit) notesArray.push('exhibit sticker');
+            }
             job.note = notesArray.join(', ');
             
             job.status = 'done';
