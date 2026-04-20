@@ -146,10 +146,7 @@ async function processFiles(mode) {
                 const textContent = await page.getTextContent();
                 const pageText = textContent.items.map(i => i.str).join(' ').toLowerCase();
 
-                if (pageText.includes('exhibit')) {
-                    pageHasExhibit = true;
-                    hasExhibit = true;
-                }
+                // Note: We deliberately do NOT search pageText for 'exhibit' to avoid falsely flagging pages that just mention it in the footer.
                 
                 for (const ann of annotations) {
                     if (ann.subtype === 'Highlight') {
@@ -285,8 +282,12 @@ async function processFiles(mode) {
                 if (pageHasImageOp && !hasPhoto) {
                     // A "real photograph" or phone scan must contain significant noise and grouping.
                     const totalAreaPixels = canvas.width * canvas.height;
-                    // Lowered thresholds to catch less saturated, noisy phone scans
+                    // Catch color images/photos
                     if (colorfulPixelCount > (totalAreaPixels * 0.02) && uniqueColorBuckets.size > 50) {
+                        hasPhoto = true;
+                    } 
+                    // Catch very noisy or grayscale phone scans (where > 30% of the page is off-white)
+                    else if (colorfulPixelCount > (totalAreaPixels * 0.30)) {
                         hasPhoto = true;
                     }
                 }
