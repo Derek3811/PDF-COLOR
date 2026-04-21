@@ -75,6 +75,7 @@ function renderTable() {
         if (job.note) {
             const splitted = job.note.split(', ');
             notesHtml = splitted.map(n => `<span class="note-tag">${n}</span>`).join('');
+        }
         if (job.totalPages) totalP += job.totalPages;
         if (job.colorPages) {
             totalColor += job.colorPages;
