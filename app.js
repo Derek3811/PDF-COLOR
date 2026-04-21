@@ -75,11 +75,11 @@ function renderTable() {
         if (job.note) {
             const splitted = job.note.split(', ');
             notesHtml = splitted.map(n => `<span class="note-tag">${n}</span>`).join('');
-            if (job.colorPages > 0) colorWithNotes += job.colorPages;
-        }
-        
         if (job.totalPages) totalP += job.totalPages;
-        if (job.colorPages) totalColor += job.colorPages;
+        if (job.colorPages) {
+            totalColor += job.colorPages;
+            colorWithNotes += job.colorPages; // This represents significant color pages
+        }
         if (job.anyColorPages) totalAnyColor += job.anyColorPages;
 
         tr.innerHTML = `
