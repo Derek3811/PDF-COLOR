@@ -19,12 +19,13 @@ const sumColorNotesPagesEl = document.getElementById('sumColorNotesPages');
 const sumAnyColorPagesEl = document.getElementById('sumAnyColor');
 const sumBillableColorEl = document.getElementById('sumBillableColor');
 const sumGrandTotalEl = document.getElementById('sumGrandTotal');
+const sumTotalBWEl = document.getElementById('sumTotalBW');
 
 const colorPriceInput = document.getElementById('colorPrice');
 const bwPriceInput = document.getElementById('bwPrice');
 
 function debugCheckElements() {
-    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnClear', 'resultsTable', 'resultsBody', 'summarySection', 'sumTotalPages', 'sumColorNotesPages', 'sumAnyColor', 'sumBillableColor', 'sumGrandTotal', 'colorPrice', 'bwPrice'];
+    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnClear', 'resultsTable', 'resultsBody', 'summarySection', 'sumTotalPages', 'sumColorNotesPages', 'sumAnyColor', 'sumBillableColor', 'sumGrandTotal', 'sumTotalBW', 'colorPrice', 'bwPrice'];
     console.log("--- DOM ELEMENT CHECK ---");
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -123,19 +124,23 @@ function renderTable() {
         if (resultsBody) resultsBody.appendChild(tr);
     }
     
-    if (sumTotalPagesEl) sumTotalPagesEl.textContent = totalP;
-    if (sumColorNotesPagesEl) sumColorNotesPagesEl.textContent = colorWithNotes;
-    if (sumAnyColorPagesEl) sumAnyColorPagesEl.textContent = totalAnyColor;
-    if (sumBillableColorEl) sumBillableColorEl.textContent = totalBillable;
+    updateSummary(totalP, totalBillable, colorWithNotes, totalAnyColor);
+}
 
-    // Financial Calculation
+function updateSummary(totalP, totalBillable, colorWithNotes, totalAnyColor) {
     const colorPrice = parseFloat(colorPriceInput?.value || 0.59);
     const bwPrice = parseFloat(bwPriceInput?.value || 0.12);
+    
     const totalBW = Math.max(0, totalP - totalBillable);
     const colorCost = totalBillable * colorPrice;
     const bwCost = totalBW * bwPrice;
     const grandTotal = colorCost + bwCost;
 
+    if (sumTotalPagesEl) sumTotalPagesEl.textContent = totalP;
+    if (sumColorNotesPagesEl) sumColorNotesPagesEl.textContent = colorWithNotes;
+    if (sumAnyColorPagesEl) sumAnyColorPagesEl.textContent = totalAnyColor;
+    if (sumBillableColorEl) sumBillableColorEl.textContent = totalBillable;
+    if (sumTotalBWEl) sumTotalBWEl.textContent = totalBW;
     if (sumGrandTotalEl) sumGrandTotalEl.textContent = `$${grandTotal.toFixed(2)}`;
 }
 
