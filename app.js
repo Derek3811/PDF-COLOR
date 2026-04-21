@@ -524,7 +524,8 @@ async function downloadZip(type) {
         if ((type === 'COLOR' && isColor) || (type === 'BW' && isBW)) {
             // Using arrayBuffer to ensure JSZip gets the raw data reliably
             const data = await f.file.arrayBuffer();
-            zip.file(f.file.name, data);
+            // Use f.path to recreate the original folder structure
+            zip.file(f.path, data);
             count++;
         }
     }
