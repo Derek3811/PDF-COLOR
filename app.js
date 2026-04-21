@@ -32,6 +32,7 @@ fileInput.addEventListener('change', () => {
 });
 
 function handleFiles(newFiles) {
+    console.log("handleFiles triggered with count:", newFiles.length);
     for (const file of newFiles) {
         if (file.type === 'application/pdf') {
             const id = Math.random().toString(36).substring(7);
@@ -39,15 +40,17 @@ function handleFiles(newFiles) {
             jobResults[id] = { name: file.name, status: 'pending', totalPages: null, colorPages: null, anyColorPages: null, note: '' };
         }
     }
+    console.log("Files state after upload:", files);
     renderTable();
     updateButtons();
 }
 
 function updateButtons() {
     const hasFiles = files.length > 0;
-    btnTotalPages.disabled = !hasFiles;
-    btnColorPages.disabled = !hasFiles;
-    btnClear.disabled = !hasFiles;
+    console.log("Updating buttons. Has files:", hasFiles);
+    if (btnTotalPages) btnTotalPages.disabled = !hasFiles;
+    if (btnColorPages) btnColorPages.disabled = !hasFiles;
+    if (btnClear) btnClear.disabled = !hasFiles;
 }
 
 btnClear.addEventListener('click', () => {
@@ -102,16 +105,18 @@ function renderTable() {
 const yieldEventLoop = () => new Promise(r => setTimeout(r, 0));
 
 async function processFiles(mode) {
-    summarySection.classList.remove('hidden');
+    console.log("processFiles triggered! Mode:", mode, "Files count:", files.length);
+    if (summarySection) summarySection.classList.remove('hidden');
     
-    btnTotalPages.disabled = true;
-    btnColorPages.disabled = true;
+    if (btnTotalPages) btnTotalPages.disabled = true;
+    if (btnColorPages) btnColorPages.disabled = true;
 
     // Use a single invisible canvas
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
     for (const f of files) {
+        console.log("Processing file:", f.file.name);
         const job = jobResults[f.id];
         if (job.status === 'done') continue;
         
