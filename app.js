@@ -15,7 +15,6 @@ const resultsBody = document.getElementById('resultsBody');
 const summarySection = document.getElementById('summarySection');
 
 const sumTotalPagesEl = document.getElementById('sumTotalPages');
-const sumColorPagesEl = document.getElementById('sumColorPages');
 const sumColorNotesPagesEl = document.getElementById('sumColorNotesPages');
 const sumAnyColorPagesEl = document.getElementById('sumAnyColor');
 
@@ -95,7 +94,6 @@ function renderTable() {
     }
     
     sumTotalPagesEl.textContent = totalP;
-    sumColorPagesEl.textContent = totalColor;
     sumColorNotesPagesEl.textContent = colorWithNotes;
     sumAnyColorPagesEl.textContent = totalAnyColor;
 }
