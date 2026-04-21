@@ -75,13 +75,18 @@ function handleFiles(newFiles) {
 
 function updateButtons() {
     const hasFiles = files.length > 0;
-    const allDone = files.length > 0 && files.every(f => jobResults[f.id].status === 'done');
+    const isProcessing = files.some(f => jobResults[f.id].status === 'processing');
+    const anyDone = files.some(f => jobResults[f.id].status === 'done');
     
-    if (btnTotalPages) btnTotalPages.disabled = !hasFiles;
-    if (btnColorPages) btnColorPages.disabled = !hasFiles;
-    if (btnDownloadColor) btnDownloadColor.disabled = !allDone;
-    if (btnDownloadBW) btnDownloadBW.disabled = !allDone;
-    if (btnClear)    btnClear.disabled = !hasFiles;
+    // Enable download if we have files and aren't currently processing, 
+    // and at least one file is 'done' (analyzed).
+    const canDownload = hasFiles && !isProcessing && anyDone;
+
+    if (btnTotalPages) btnTotalPages.disabled = !hasFiles || isProcessing;
+    if (btnColorPages) btnColorPages.disabled = !hasFiles || isProcessing;
+    if (btnDownloadColor) btnDownloadColor.disabled = !canDownload;
+    if (btnDownloadBW) btnDownloadBW.disabled = !canDownload;
+    if (btnClear)    btnClear.disabled = !hasFiles || isProcessing;
 }
 
 btnClear.addEventListener('click', () => {
@@ -143,6 +148,7 @@ function renderTable() {
     if (footBillableEl) footBillableEl.textContent = totalBil;
     
     updateSummary(totalP, totalBil);
+    updateButtons();
 
     // Attach listeners to inline inputs
     document.querySelectorAll('.inline-edit-input').forEach(input => {
@@ -452,7 +458,9 @@ async function downloadZip(type) {
         const isBW = billableCount === 0;
 
         if ((type === 'COLOR' && isColor) || (type === 'BW' && isBW)) {
-            zip.file(f.file.name, f.file);
+            // Using arrayBuffer to ensure JSZip gets the raw data reliably
+            const data = await f.file.arrayBuffer();
+            zip.file(f.file.name, data);
             count++;
         }
     }
