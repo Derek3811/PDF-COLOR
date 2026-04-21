@@ -49,11 +49,52 @@ debugCheckElements();
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e => {
+dropZone.addEventListener('drop', async e => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+    
+    const items = e.dataTransfer.items;
+    if (items) {
+        let allFiles = [];
+        for (const item of items) {
+            const entry = item.webkitGetAsEntry();
+            if (entry) {
+                const folderFiles = await traverseFileTree(entry);
+                allFiles = allFiles.concat(folderFiles);
+            }
+        }
+        handleFiles(allFiles);
+    } else if (e.dataTransfer.files.length) {
+        handleFiles(e.dataTransfer.files);
+    }
 });
+
+async function traverseFileTree(entry, path = "") {
+    const files = [];
+    async function internalTraverse(item, currentPath) {
+        if (item.isFile) {
+            if (item.name.toLowerCase().endsWith('.pdf')) {
+                const file = await new Promise(res => item.file(res));
+                // Store relative path for drag and drop
+                file.filepath = currentPath + item.name;
+                files.push(file);
+            }
+        } else if (item.isDirectory) {
+            const dirReader = item.createReader();
+            const getEntries = () => new Promise(res => dirReader.readEntries(res));
+            let entries = await getEntries();
+            while (entries.length > 0) {
+                for (const child of entries) {
+                    await internalTraverse(child, currentPath + item.name + "/");
+                }
+                entries = await getEntries();
+            }
+        }
+    }
+    await internalTraverse(entry, path);
+    return files;
+}
+
 fileInput.addEventListener('change', () => {
     if (fileInput.files.length) handleFiles(fileInput.files);
 });
@@ -64,10 +105,19 @@ if (bwPriceInput) bwPriceInput.addEventListener('input', () => renderTable());
 function handleFiles(newFiles) {
     console.log("handleFiles triggered with count:", newFiles.length);
     for (const file of newFiles) {
-        if (file.type === 'application/pdf') {
+        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
             const id = Math.random().toString(36).substring(7);
-            files.push({ id, file });
-            jobResults[id] = { name: file.name, status: 'pending', totalPages: null, colorPages: null, anyColorPages: null, note: '' };
+            const path = file.webkitRelativePath || file.filepath || file.name;
+            files.push({ id, file, path });
+            jobResults[id] = { 
+                name: file.name, 
+                path: path,
+                status: 'pending', 
+                totalPages: null, 
+                colorPages: null, 
+                anyColorPages: null, 
+                note: '' 
+            };
         }
     }
     console.log("Files state after upload:", files);
@@ -132,7 +182,7 @@ function renderTable() {
         const colorInputHtml = `<input type="number" class="inline-edit-input" value="${job.colorPages ?? 0}" min="0" max="${job.totalPages || 9999}" data-id="${f.id}">`;
 
         tr.innerHTML = `
-            <td>${job.name}</td>
+            <td title="${job.path}">${job.path}</td>
             <td><span class="status-badge ${job.status}">${job.status}</span></td>
             <td>${job.totalPages ?? '-'}</td>
             <td>${colorInputHtml}</td>

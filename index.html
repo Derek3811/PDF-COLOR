@@ -20,7 +20,7 @@
             <span class="icon">📁</span>
             <p>Drag & Drop hundreds of PDFs here</p>
             <sub class="helper-text">or click to browse</sub>
-            <input type="file" id="fileInput" multiple accept=".pdf" class="hidden">
+            <input type="file" id="fileInput" multiple accept=".pdf" webkitdirectory directory class="hidden">
         </section>
 
         <section class="controls">
@@ -78,7 +78,7 @@
             <table class="data-table hidden" id="resultsTable">
                 <thead>
                     <tr>
-                        <th>PDF Name</th>
+                        <th>File Path</th>
                         <th>Status</th>
                         <th>Total Pages</th>
                         <th>Color Pages (to print)</th>
