@@ -17,6 +17,7 @@ const summarySection = document.getElementById('summarySection');
 const sumTotalPagesEl = document.getElementById('sumTotalPages');
 const sumColorPagesEl = document.getElementById('sumColorPages');
 const sumColorNotesPagesEl = document.getElementById('sumColorNotesPages');
+const sumAnyColorPagesEl = document.getElementById('sumAnyColor');
 
 // Event Listeners
 dropZone.addEventListener('click', () => fileInput.click());
@@ -36,7 +37,7 @@ function handleFiles(newFiles) {
         if (file.type === 'application/pdf') {
             const id = Math.random().toString(36).substring(7);
             files.push({ id, file });
-            jobResults[id] = { name: file.name, status: 'pending', totalPages: null, colorPages: null, note: '' };
+            jobResults[id] = { name: file.name, status: 'pending', totalPages: null, colorPages: null, anyColorPages: null, note: '' };
         }
     }
     renderTable();
@@ -61,7 +62,7 @@ btnClear.addEventListener('click', () => {
 
 function renderTable() {
     resultsBody.innerHTML = '';
-    let totalP = 0, totalColor = 0, colorWithNotes = 0;
+    let totalP = 0, totalColor = 0, colorWithNotes = 0, totalAnyColor = 0;
     
     if (files.length > 0) resultsTable.classList.remove('hidden');
     else resultsTable.classList.add('hidden');
@@ -79,12 +80,14 @@ function renderTable() {
         
         if (job.totalPages) totalP += job.totalPages;
         if (job.colorPages) totalColor += job.colorPages;
+        if (job.anyColorPages) totalAnyColor += job.anyColorPages;
 
         tr.innerHTML = `
             <td>${job.name}</td>
             <td><span class="status-badge ${job.status}">${job.status}</span></td>
             <td>${job.totalPages ?? '-'}</td>
             <td>${job.colorPages ?? '-'}</td>
+            <td>${job.anyColorPages ?? '-'}</td>
             <td>${notesHtml || '-'}</td>
         `;
         resultsBody.appendChild(tr);
@@ -93,6 +96,7 @@ function renderTable() {
     sumTotalPagesEl.textContent = totalP;
     sumColorPagesEl.textContent = totalColor;
     sumColorNotesPagesEl.textContent = colorWithNotes;
+    sumAnyColorPagesEl.textContent = totalAnyColor;
 }
 
 // Ensure UI stays responsive by yielding
@@ -129,6 +133,7 @@ async function processFiles(mode) {
             }
             
             let colorPages = 0;
+            let anyColorPages = 0;
             let hasPhoto = false;
             let hasGraphic = false;
             let hasHighlight = false;
@@ -192,6 +197,7 @@ async function processFiles(mode) {
                 
                 const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
                 let isColor = false;
+                let isAnyColorPage = false;
                 
                 let colorfulPixelCount = 0;
                 let uniqueColorBuckets = new Set();
@@ -218,6 +224,11 @@ async function processFiles(mode) {
                         const minCh = Math.min(r,g,b);
                         const diff = maxCh - minCh;
                         
+                        // Track ANY color (including top area, logos, etc)
+                        if (diff > 15) {
+                            isAnyColorPage = true;
+                        }
+
                         // 1. Coordinate filtering: Skip top 15% (exclude logos)
                         if (y < top15) continue;
                         
@@ -285,6 +296,7 @@ async function processFiles(mode) {
                 }
                 
                 if (isColor) colorPages++;
+                if (isAnyColorPage) anyColorPages++;
                 
                 if (pageHasImageOp && !hasPhoto) {
                     // A "real photograph" or phone scan must contain significant noise and grouping.
@@ -304,6 +316,7 @@ async function processFiles(mode) {
             }
             
             job.colorPages = colorPages;
+            job.anyColorPages = anyColorPages;
             
             const notesArray = [];
             if (hasPhoto) {
