@@ -93,9 +93,9 @@ function renderTable() {
         resultsBody.appendChild(tr);
     }
     
-    sumTotalPagesEl.textContent = totalP;
-    sumColorNotesPagesEl.textContent = colorWithNotes;
-    sumAnyColorPagesEl.textContent = totalAnyColor;
+    if (sumTotalPagesEl) sumTotalPagesEl.textContent = totalP;
+    if (sumColorNotesPagesEl) sumColorNotesPagesEl.textContent = colorWithNotes;
+    if (sumAnyColorPagesEl) sumAnyColorPagesEl.textContent = totalAnyColor;
 }
 
 // Ensure UI stays responsive by yielding
