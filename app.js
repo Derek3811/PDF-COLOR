@@ -126,7 +126,7 @@ function renderTable() {
             <td>${colorInputHtml}</td>
             <td>${job.anyColorPages ?? '-'}</td>
             <td>${billableCount}</td>
-            <td>${notesHtml || '-'}</td>
+            <td>${(billableCount > 0) ? (notesHtml || '-') : '-'}</td>
         `;
         if (resultsBody) resultsBody.appendChild(tr);
     }
