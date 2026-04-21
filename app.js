@@ -363,12 +363,12 @@ async function processFiles(mode) {
                 
                 // 3. Grouping determination (Threshold) checking for block presence
                 // Require significant pixel mass to avoid scan noise (e.g., 250+ pixels = ~1 sq inch area)
-                if (yellowPixels > 100) {
+                if (yellowPixels > 40) {
                     pageHasHighlight = true;
                     hasHighlight = true;
                 }
                 
-                if (exhibitStickerPixels > 100) {
+                if (exhibitStickerPixels > 50) {
                     pageHasExhibit = true;
                     hasExhibit = true;
                 }
@@ -379,12 +379,16 @@ async function processFiles(mode) {
                 
                 // Demand sufficient color mass to justify color printing (excludes tiny logos, colored bates stamps)
                 // 300 pixels at 0.2 scale (~1.5 sq inches text)
-                if (genericColorPixels > 200) {
+                if (genericColorPixels > 80) {
                     isColor = true;
                 }
                 
                 if (isColor) colorPages++;
                 if (isAnyColorPage) anyColorPages++;
+
+                if (yellowPixels > 0 || genericColorPixels > 0) {
+                    console.log(`[DEBUG] Page ${pageNum}: YellowPixels=${yellowPixels}, GenericColor=${genericColorPixels}, ExhibitSticker=${exhibitStickerPixels} -> isColor=${isColor}`);
+                }
                 
                 if (pageHasImageOp && !hasPhoto) {
                     // A "real photograph" or phone scan must contain significant noise and grouping.
