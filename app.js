@@ -14,18 +14,24 @@ const resultsTable = document.getElementById('resultsTable');
 const resultsBody = document.getElementById('resultsBody');
 const summarySection = document.getElementById('summarySection');
 
-const sumTotalPagesEl = document.getElementById('sumTotalPages');
-const sumColorNotesPagesEl = document.getElementById('sumColorNotesPages');
-const sumAnyColorPagesEl = document.getElementById('sumAnyColor');
-const sumBillableColorEl = document.getElementById('sumBillableColor');
-const sumGrandTotalEl = document.getElementById('sumGrandTotal');
-const sumTotalBWEl = document.getElementById('sumTotalBW');
+const resTotalPagesEl = document.getElementById('resTotalPages');
+const resBillableColorEl = document.getElementById('resBillableColor');
+const resTotalBWEl = document.getElementById('resTotalBW');
+const resColorCostEl = document.getElementById('resColorCost');
+const resBWCostEl = document.getElementById('resBWCost');
+const resGrandTotalEl = document.getElementById('resGrandTotal');
+
+const resultsFooter = document.getElementById('resultsFooter');
+const footTotalPagesEl = document.getElementById('footTotalPages');
+const footSigColorEl = document.getElementById('footSigColor');
+const footAnyColorEl = document.getElementById('footAnyColor');
+const footBillableEl = document.getElementById('footBillable');
 
 const colorPriceInput = document.getElementById('colorPrice');
 const bwPriceInput = document.getElementById('bwPrice');
 
 function debugCheckElements() {
-    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnClear', 'resultsTable', 'resultsBody', 'summarySection', 'sumTotalPages', 'sumColorNotesPages', 'sumAnyColor', 'sumBillableColor', 'sumGrandTotal', 'sumTotalBW', 'colorPrice', 'bwPrice'];
+    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorCost', 'resBWCost', 'resGrandTotal', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice'];
     console.log("--- DOM ELEMENT CHECK ---");
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -70,7 +76,7 @@ function updateButtons() {
     console.log("Updating buttons. Has files:", hasFiles);
     if (btnTotalPages) btnTotalPages.disabled = !hasFiles;
     if (btnColorPages) btnColorPages.disabled = !hasFiles;
-    if (btnClear) btnClear.disabled = !hasFiles;
+    if (btnClear)    btnClear.disabled = !hasFiles;
 }
 
 btnClear.addEventListener('click', () => {
@@ -80,16 +86,19 @@ btnClear.addEventListener('click', () => {
     updateButtons();
     if (summarySection) summarySection.classList.add('hidden');
     if (resultsTable) resultsTable.classList.add('hidden');
+    if (resultsFooter) resultsFooter.classList.add('hidden');
 });
 
 function renderTable() {
     if (resultsBody) resultsBody.innerHTML = '';
-    let totalP = 0, totalColor = 0, colorWithNotes = 0, totalAnyColor = 0, totalBillable = 0;
+    let totalP = 0, totalSig = 0, totalAny = 0, totalBil = 0;
     
     if (files.length > 0) {
         if (resultsTable) resultsTable.classList.remove('hidden');
+        if (resultsFooter) resultsFooter.classList.remove('hidden');
     } else {
         if (resultsTable) resultsTable.classList.add('hidden');
+        if (resultsFooter) resultsFooter.classList.add('hidden');
     }
     
     for (const f of files) {
@@ -102,15 +111,11 @@ function renderTable() {
             notesHtml = splitted.map(n => `<span class="note-tag">${n}</span>`).join('');
         }
         if (job.totalPages) totalP += job.totalPages;
-        if (job.colorPages) {
-            totalColor += job.colorPages;
-            colorWithNotes += job.colorPages; // Significant color pages
-        }
-        if (job.anyColorPages) totalAnyColor += job.anyColorPages;
+        if (job.colorPages) totalSig += job.colorPages;
+        if (job.anyColorPages) totalAny += job.anyColorPages;
 
-        // Billable Logic: If sig colors > 0, bill for ALL physical color pages (anyColor)
         const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
-        totalBillable += billableCount;
+        totalBil += billableCount;
 
         tr.innerHTML = `
             <td>${job.name}</td>
@@ -124,10 +129,16 @@ function renderTable() {
         if (resultsBody) resultsBody.appendChild(tr);
     }
     
-    updateSummary(totalP, totalBillable, colorWithNotes, totalAnyColor);
+    // Footer Totals
+    if (footTotalPagesEl) footTotalPagesEl.textContent = totalP;
+    if (footSigColorEl) footSigColorEl.textContent = totalSig;
+    if (footAnyColorEl) footAnyColorEl.textContent = totalAny;
+    if (footBillableEl) footBillableEl.textContent = totalBil;
+    
+    updateSummary(totalP, totalBil);
 }
 
-function updateSummary(totalP, totalBillable, colorWithNotes, totalAnyColor) {
+function updateSummary(totalP, totalBillable) {
     const colorPrice = parseFloat(colorPriceInput?.value || 0.59);
     const bwPrice = parseFloat(bwPriceInput?.value || 0.12);
     
@@ -136,12 +147,12 @@ function updateSummary(totalP, totalBillable, colorWithNotes, totalAnyColor) {
     const bwCost = totalBW * bwPrice;
     const grandTotal = colorCost + bwCost;
 
-    if (sumTotalPagesEl) sumTotalPagesEl.textContent = totalP;
-    if (sumColorNotesPagesEl) sumColorNotesPagesEl.textContent = colorWithNotes;
-    if (sumAnyColorPagesEl) sumAnyColorPagesEl.textContent = totalAnyColor;
-    if (sumBillableColorEl) sumBillableColorEl.textContent = totalBillable;
-    if (sumTotalBWEl) sumTotalBWEl.textContent = totalBW;
-    if (sumGrandTotalEl) sumGrandTotalEl.textContent = `$${grandTotal.toFixed(2)}`;
+    if (resTotalPagesEl) resTotalPagesEl.textContent = totalP;
+    if (resBillableColorEl) resBillableColorEl.textContent = totalBillable;
+    if (resTotalBWEl) resTotalBWEl.textContent = totalBW;
+    if (resColorCostEl) resColorCostEl.textContent = `$${colorCost.toFixed(2)}`;
+    if (resBWCostEl) resBWCostEl.textContent = `$${bwCost.toFixed(2)}`;
+    if (resGrandTotalEl) resGrandTotalEl.textContent = `$${grandTotal.toFixed(2)}`;
 }
 
 // Ensure UI stays responsive by yielding

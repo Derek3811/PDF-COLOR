@@ -40,34 +40,11 @@
         </section>
 
         <section class="summary hidden" id="summarySection">
-            <div class="summary-card">
-                <h3>Total Pages</h3>
-                <p id="sumTotalPages">0</p>
-            </div>
-            <div class="summary-card">
-                <h3>Significant Color Pages</h3>
-                <p id="sumColorNotesPages">0</p>
-                <sub class="helper-text">To print in Color</sub>
-            </div>
-            <div class="summary-card highlight">
-                <h3>Total Billable Color</h3>
-                <p id="sumBillableColor">0</p>
-                <sub class="helper-text">Final Printer Charge</sub>
-            </div>
-            <div class="summary-card">
-                <h3>Any Color Pages</h3>
-                <p id="sumAnyColor">0</p>
-                <sub class="helper-text">Includes Logos/Headers</sub>
-            </div>
-            <div class="summary-card">
-                <h3>Total B&W Pages</h3>
-                <p id="sumTotalBW">0</p>
-                <sub class="helper-text">Prints in Grayscale</sub>
-            </div>
-            <div class="summary-card grand-total">
-                <h3>Total Estimated Cost</h3>
-                <p id="sumGrandTotal">$0.00</p>
-                <sub class="helper-text">Based on Billable Logic</sub>
+            <div class="summary-card consolidated">
+                <div class="summary-line">Total Pages: <span id="resTotalPages">0</span></div>
+                <div class="summary-line">Total Billable Color: <span id="resBillableColor">0</span> | Total B&W: <span id="resTotalBW">0</span></div>
+                <div class="summary-line">Color Cost: <span id="resColorCost">$0.00</span> | B&W Cost: <span id="resBWCost">$0.00</span></div>
+                <div class="summary-line grand-total-line">Grand Total Estimated Cost: <span id="resGrandTotal">$0.00</span></div>
             </div>
         </section>
 
@@ -87,6 +64,16 @@
                 <tbody id="resultsBody">
                     <!-- Dynamic rows will be inserted here -->
                 </tbody>
+                <tfoot id="resultsFooter" class="hidden">
+                    <tr>
+                        <td colspan="2">TOTALS</td>
+                        <td id="footTotalPages">0</td>
+                        <td id="footSigColor">10</td><!-- Dummy data to show structure -->
+                        <td id="footAnyColor">0</td>
+                        <td id="footBillable">0</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </section>
     </div>
