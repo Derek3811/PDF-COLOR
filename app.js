@@ -347,7 +347,7 @@ async function processFiles(mode) {
                             hue *= 60;
                             if (hue < 0) hue += 360;
                             
-                            if (hue >= 45 && hue <= 65) {
+                            if (hue >= 40 && hue <= 70) {
                                 yellowPixels++;
                             }
                         }
@@ -363,7 +363,7 @@ async function processFiles(mode) {
                 
                 // 3. Grouping determination (Threshold) checking for block presence
                 // Require significant pixel mass to avoid scan noise (e.g., 250+ pixels = ~1 sq inch area)
-                if (yellowPixels > 250) {
+                if (yellowPixels > 100) {
                     pageHasHighlight = true;
                     hasHighlight = true;
                 }
@@ -379,7 +379,7 @@ async function processFiles(mode) {
                 
                 // Demand sufficient color mass to justify color printing (excludes tiny logos, colored bates stamps)
                 // 300 pixels at 0.2 scale (~1.5 sq inches text)
-                if (genericColorPixels > 300) {
+                if (genericColorPixels > 200) {
                     isColor = true;
                 }
                 
