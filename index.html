@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <!-- Include pdf.js from CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -25,6 +26,8 @@
         <section class="controls">
             <button id="btnTotalPages" class="btn primary" disabled>Get Total Pages</button>
             <button id="btnColorPages" class="btn secondary" disabled>Detect Color Pages</button>
+            <button id="btnDownloadColor" class="btn success" disabled>Download Color Zip</button>
+            <button id="btnDownloadBW" class="btn info" disabled>Download B&W Zip</button>
             <button id="btnClear" class="btn ghost outline" disabled>Clear All</button>
         </section>
 

@@ -9,6 +9,8 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const btnTotalPages = document.getElementById('btnTotalPages');
 const btnColorPages = document.getElementById('btnColorPages');
+const btnDownloadColor = document.getElementById('btnDownloadColor');
+const btnDownloadBW = document.getElementById('btnDownloadBW');
 const btnClear = document.getElementById('btnClear');
 const resultsTable = document.getElementById('resultsTable');
 const resultsBody = document.getElementById('resultsBody');
@@ -31,7 +33,7 @@ const colorPriceInput = document.getElementById('colorPrice');
 const bwPriceInput = document.getElementById('bwPrice');
 
 function debugCheckElements() {
-    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorCost', 'resBWCost', 'resGrandTotal', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice'];
+    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnDownloadColor', 'btnDownloadBW', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorCost', 'resBWCost', 'resGrandTotal', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice'];
     console.log("--- DOM ELEMENT CHECK ---");
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -73,9 +75,12 @@ function handleFiles(newFiles) {
 
 function updateButtons() {
     const hasFiles = files.length > 0;
-    console.log("Updating buttons. Has files:", hasFiles);
+    const allDone = files.length > 0 && files.every(f => jobResults[f.id].status === 'done');
+    
     if (btnTotalPages) btnTotalPages.disabled = !hasFiles;
     if (btnColorPages) btnColorPages.disabled = !hasFiles;
+    if (btnDownloadColor) btnDownloadColor.disabled = !allDone;
+    if (btnDownloadBW) btnDownloadBW.disabled = !allDone;
     if (btnClear)    btnClear.disabled = !hasFiles;
 }
 
@@ -434,3 +439,35 @@ async function processFiles(mode) {
 
 btnTotalPages.addEventListener('click', () => processFiles('TOTAL_PAGES'));
 btnColorPages.addEventListener('click', () => processFiles('COLOR_PAGES'));
+
+async function downloadZip(type) {
+    const zip = new JSZip();
+    let count = 0;
+
+    for (const f of files) {
+        const job = jobResults[f.id];
+        const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
+        
+        const isColor = billableCount > 0;
+        const isBW = billableCount === 0;
+
+        if ((type === 'COLOR' && isColor) || (type === 'BW' && isBW)) {
+            zip.file(f.file.name, f.file);
+            count++;
+        }
+    }
+
+    if (count === 0) {
+        alert('No files in this category');
+        return;
+    }
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(content);
+    link.download = `${type}_Files_${new Date().getTime()}.zip`;
+    link.click();
+}
+
+btnDownloadColor.addEventListener('click', () => downloadZip('COLOR'));
+btnDownloadBW.addEventListener('click', () => downloadZip('BW'));
