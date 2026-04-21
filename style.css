@@ -263,3 +263,27 @@ header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 0.5rem; }
     border-top: 2px solid var(--primary-color);
     padding: 1.25rem 1rem;
 }
+
+/* Inline Edit Input */
+.inline-edit-input {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.4rem;
+    color: var(--primary-color);
+    font-weight: 700;
+    width: 60px;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.inline-edit-input:focus {
+    border-color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 8px var(--primary-glow);
+}
+
+.inline-edit-input::-webkit-inner-spin-button {
+    opacity: 1;
+}

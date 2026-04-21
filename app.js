@@ -117,11 +117,13 @@ function renderTable() {
         const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
         totalBil += billableCount;
 
+        const colorInputHtml = `<input type="number" class="inline-edit-input" value="${job.colorPages ?? 0}" min="0" max="${job.totalPages || 9999}" data-id="${f.id}">`;
+
         tr.innerHTML = `
             <td>${job.name}</td>
             <td><span class="status-badge ${job.status}">${job.status}</span></td>
             <td>${job.totalPages ?? '-'}</td>
-            <td>${job.colorPages ?? '-'}</td>
+            <td>${colorInputHtml}</td>
             <td>${job.anyColorPages ?? '-'}</td>
             <td>${billableCount}</td>
             <td>${notesHtml || '-'}</td>
@@ -136,6 +138,34 @@ function renderTable() {
     if (footBillableEl) footBillableEl.textContent = totalBil;
     
     updateSummary(totalP, totalBil);
+
+    // Attach listeners to inline inputs
+    document.querySelectorAll('.inline-edit-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+            handleManualOverride(e.target.dataset.id, parseInt(e.target.value) || 0);
+        });
+    });
+}
+
+function handleManualOverride(id, newValue) {
+    const job = jobResults[id];
+    if (!job) return;
+
+    // Backup the note if we haven't already
+    if (job._fullNote === undefined) {
+        job._fullNote = job.note;
+    }
+
+    job.colorPages = newValue;
+
+    // Logic: If color count is 0, clear/hide notes. If > 0, restore original note.
+    if (newValue === 0) {
+        job.note = '';
+    } else {
+        job.note = job._fullNote || '';
+    }
+
+    renderTable();
 }
 
 function updateSummary(totalP, totalBillable) {
