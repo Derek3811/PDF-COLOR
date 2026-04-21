@@ -28,6 +28,17 @@
             <button id="btnClear" class="btn ghost outline" disabled>Clear All</button>
         </section>
 
+        <section class="pricing-controls">
+            <div class="price-input-group">
+                <label for="colorPrice">Color Page Price ($)</label>
+                <input type="number" id="colorPrice" value="0.59" step="0.01" min="0">
+            </div>
+            <div class="price-input-group">
+                <label for="bwPrice">B&W Page Price ($)</label>
+                <input type="number" id="bwPrice" value="0.12" step="0.01" min="0">
+            </div>
+        </section>
+
         <section class="summary hidden" id="summarySection">
             <div class="summary-card">
                 <h3>Total Pages</h3>
@@ -47,6 +58,11 @@
                 <h3>Any Color Pages</h3>
                 <p id="sumAnyColor">0</p>
                 <sub class="helper-text">Includes Logos/Headers</sub>
+            </div>
+            <div class="summary-card grand-total">
+                <h3>Total Estimated Cost</h3>
+                <p id="sumGrandTotal">$0.00</p>
+                <sub class="helper-text">Based on Billable Logic</sub>
             </div>
         </section>
 
