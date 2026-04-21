@@ -18,6 +18,17 @@ const sumTotalPagesEl = document.getElementById('sumTotalPages');
 const sumColorNotesPagesEl = document.getElementById('sumColorNotesPages');
 const sumAnyColorPagesEl = document.getElementById('sumAnyColor');
 
+function debugCheckElements() {
+    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnClear', 'resultsTable', 'resultsBody', 'summarySection', 'sumTotalPages', 'sumColorNotesPages', 'sumAnyColor'];
+    console.log("--- DOM ELEMENT CHECK ---");
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        console.log(`ID [${id}]:`, el ? "FOUND" : "MISSING (NULL!)");
+    });
+    console.log("--------------------------");
+}
+debugCheckElements();
+
 // Event Listeners
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
@@ -58,16 +69,19 @@ btnClear.addEventListener('click', () => {
     jobResults = {};
     renderTable();
     updateButtons();
-    summarySection.classList.add('hidden');
-    resultsTable.classList.add('hidden');
+    if (summarySection) summarySection.classList.add('hidden');
+    if (resultsTable) resultsTable.classList.add('hidden');
 });
 
 function renderTable() {
-    resultsBody.innerHTML = '';
+    if (resultsBody) resultsBody.innerHTML = '';
     let totalP = 0, totalColor = 0, colorWithNotes = 0, totalAnyColor = 0;
     
-    if (files.length > 0) resultsTable.classList.remove('hidden');
-    else resultsTable.classList.add('hidden');
+    if (files.length > 0) {
+        if (resultsTable) resultsTable.classList.remove('hidden');
+    } else {
+        if (resultsTable) resultsTable.classList.add('hidden');
+    }
     
     for (const f of files) {
         const job = jobResults[f.id];
@@ -93,7 +107,7 @@ function renderTable() {
             <td>${job.anyColorPages ?? '-'}</td>
             <td>${notesHtml || '-'}</td>
         `;
-        resultsBody.appendChild(tr);
+        if (resultsBody) resultsBody.appendChild(tr);
     }
     
     if (sumTotalPagesEl) sumTotalPagesEl.textContent = totalP;
