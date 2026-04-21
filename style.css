@@ -226,26 +226,41 @@ header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 0.5rem; }
 }
 
 /* Modern Summary Card */
+.summary-comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto 2rem auto;
+}
+
 .modern-summary {
     background: var(--card-bg);
     backdrop-filter: blur(15px);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 2rem;
-    max-width: 800px;
-    margin: 0 auto 2rem auto;
+    padding: 1.5rem;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text-main);
 }
 
 .summary-header {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--border-color);
     text-align: center;
 }
 
 .main-pages {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--primary-color);
 }
@@ -253,20 +268,21 @@ header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 0.5rem; }
 .summary-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    margin-bottom: 2rem;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-grow: 1;
 }
 
 .summary-column {
-    padding: 1.25rem;
+    padding: 1rem;
     border-radius: 10px;
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .summary-column h3 {
-    font-size: 1rem;
-    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -276,8 +292,8 @@ header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 0.5rem; }
 }
 
 .summary-stat {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    margin-bottom: 0.4rem;
     color: var(--text-main);
     display: flex;
     justify-content: space-between;
@@ -291,33 +307,51 @@ header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 0.5rem; }
 .bw-col { border-left: 4px solid var(--primary-color); }
 
 .summary-footer {
-    padding-top: 1.5rem;
+    padding-top: 1.25rem;
     border-top: 1px solid var(--border-color);
 }
 
 .grand-total-container {
     background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
-    padding: 1.5rem;
+    padding: 1rem;
     border-radius: 10px;
     text-align: center;
     border: 1px solid var(--secondary-color);
     box-shadow: 0 0 20px rgba(236, 72, 153, 0.2);
 }
 
+.grand-total-container.highlight-alt {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+.grand-total-container.highlight-alt .total-amount {
+    color: var(--primary-color);
+    text-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
 .grand-total-container .label {
     display: block;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
 }
 
 .grand-total-container .total-amount {
-    font-size: 3rem;
+    font-size: 2.25rem;
     font-weight: 800;
     color: var(--secondary-color);
     text-shadow: 0 0 15px rgba(236, 72, 153, 0.4);
+}
+
+.labor-note {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 0.75rem;
+    font-style: italic;
 }
 
 /* Table Footer */

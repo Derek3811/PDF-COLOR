@@ -25,6 +25,16 @@ const resColorCostEl = document.getElementById('resColorCost');
 const resBWCostEl = document.getElementById('resBWCost');
 const resGrandTotalEl = document.getElementById('resGrandTotal');
 
+// Auto-Run references
+const resTotalPagesAutoEl = document.getElementById('resTotalPagesAuto');
+const resBillableColorAutoEl = document.getElementById('resBillableColorAuto');
+const resTotalBWAutoEl = document.getElementById('resTotalBWAuto');
+const resColorFilesAutoEl = document.getElementById('resColorFilesAuto');
+const resBWFilesAutoEl = document.getElementById('resBWFilesAuto');
+const resColorCostAutoEl = document.getElementById('resColorCostAuto');
+const resBWCostAutoEl = document.getElementById('resBWCostAuto');
+const resGrandTotalAutoEl = document.getElementById('resGrandTotalAuto');
+
 const resultsFooter = document.getElementById('resultsFooter');
 const footTotalPagesEl = document.getElementById('footTotalPages');
 const footSigColorEl = document.getElementById('footSigColor');
@@ -35,7 +45,7 @@ const colorPriceInput = document.getElementById('colorPrice');
 const bwPriceInput = document.getElementById('bwPrice');
 
 function debugCheckElements() {
-    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnDownloadColor', 'btnDownloadBW', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorFiles', 'resBWFiles', 'resColorCost', 'resBWCost', 'resGrandTotal', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice'];
+    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnDownloadColor', 'btnDownloadBW', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorFiles', 'resBWFiles', 'resColorCost', 'resBWCost', 'resGrandTotal', 'resTotalPagesAuto', 'resBillableColorAuto', 'resTotalBWAuto', 'resColorFilesAuto', 'resBWFilesAuto', 'resColorCostAuto', 'resBWCostAuto', 'resGrandTotalAuto', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice'];
     console.log("--- DOM ELEMENT CHECK ---");
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -235,21 +245,43 @@ function updateSummary(totalP, totalBillable) {
     const colorPrice = parseFloat(colorPriceInput?.value || 0.59);
     const bwPrice = parseFloat(bwPriceInput?.value || 0.12);
     
+    // Manual Model Calculations
     let colorFileCount = 0;
     let bwFileCount = 0;
+    
+    // Auto Model Calculations
+    let totalAnyColorPages = 0;
+    let colorFileCountAuto = 0;
+    let bwFileCountAuto = 0;
 
     for (const f of files) {
         const job = jobResults[f.id];
+        
+        // Manual logic (based on Billable Color)
         const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
         if (billableCount > 0) colorFileCount++;
         else bwFileCount++;
+
+        // Auto logic (based on Any Color Pages)
+        const anyCount = job.anyColorPages || 0;
+        totalAnyColorPages += anyCount;
+        if (anyCount > 0) colorFileCountAuto++;
+        else bwFileCountAuto++;
     }
 
+    // Manual Costs
     const totalBW = Math.max(0, totalP - totalBillable);
     const colorCost = totalBillable * colorPrice;
     const bwCost = totalBW * bwPrice;
     const grandTotal = colorCost + bwCost;
 
+    // Auto Costs
+    const totalBWAuto = Math.max(0, totalP - totalAnyColorPages);
+    const colorCostAuto = totalAnyColorPages * colorPrice;
+    const bwCostAuto = totalBWAuto * bwPrice;
+    const grandTotalAuto = colorCostAuto + bwCostAuto;
+
+    // Update Manual UI
     if (resTotalPagesEl) resTotalPagesEl.textContent = totalP;
     if (resBillableColorEl) resBillableColorEl.textContent = totalBillable;
     if (resTotalBWEl) resTotalBWEl.textContent = totalBW;
@@ -258,6 +290,16 @@ function updateSummary(totalP, totalBillable) {
     if (resColorCostEl) resColorCostEl.textContent = `$${colorCost.toFixed(2)}`;
     if (resBWCostEl) resBWCostEl.textContent = `$${bwCost.toFixed(2)}`;
     if (resGrandTotalEl) resGrandTotalEl.textContent = `$${grandTotal.toFixed(2)}`;
+
+    // Update Auto UI
+    if (resTotalPagesAutoEl) resTotalPagesAutoEl.textContent = totalP;
+    if (resBillableColorAutoEl) resBillableColorAutoEl.textContent = totalAnyColorPages;
+    if (resTotalBWAutoEl) resTotalBWAutoEl.textContent = totalBWAuto;
+    if (resColorFilesAutoEl) resColorFilesAutoEl.textContent = colorFileCountAuto;
+    if (resBWFilesAutoEl) resBWFilesAutoEl.textContent = bwFileCountAuto;
+    if (resColorCostAutoEl) resColorCostAutoEl.textContent = `$${colorCostAuto.toFixed(2)}`;
+    if (resBWCostAutoEl) resBWCostAutoEl.textContent = `$${bwCostAuto.toFixed(2)}`;
+    if (resGrandTotalAutoEl) resGrandTotalAutoEl.textContent = `$${grandTotalAuto.toFixed(2)}`;
 }
 
 // Ensure UI stays responsive by yielding
