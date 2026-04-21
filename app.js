@@ -17,9 +17,10 @@ const summarySection = document.getElementById('summarySection');
 const sumTotalPagesEl = document.getElementById('sumTotalPages');
 const sumColorNotesPagesEl = document.getElementById('sumColorNotesPages');
 const sumAnyColorPagesEl = document.getElementById('sumAnyColor');
+const sumBillableColorEl = document.getElementById('sumBillableColor');
 
 function debugCheckElements() {
-    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnClear', 'resultsTable', 'resultsBody', 'summarySection', 'sumTotalPages', 'sumColorNotesPages', 'sumAnyColor'];
+    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnClear', 'resultsTable', 'resultsBody', 'summarySection', 'sumTotalPages', 'sumColorNotesPages', 'sumAnyColor', 'sumBillableColor'];
     console.log("--- DOM ELEMENT CHECK ---");
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -75,7 +76,7 @@ btnClear.addEventListener('click', () => {
 
 function renderTable() {
     if (resultsBody) resultsBody.innerHTML = '';
-    let totalP = 0, totalColor = 0, colorWithNotes = 0, totalAnyColor = 0;
+    let totalP = 0, totalColor = 0, colorWithNotes = 0, totalAnyColor = 0, totalBillable = 0;
     
     if (files.length > 0) {
         if (resultsTable) resultsTable.classList.remove('hidden');
@@ -95,9 +96,13 @@ function renderTable() {
         if (job.totalPages) totalP += job.totalPages;
         if (job.colorPages) {
             totalColor += job.colorPages;
-            colorWithNotes += job.colorPages; // This represents significant color pages
+            colorWithNotes += job.colorPages; // Significant color pages
         }
         if (job.anyColorPages) totalAnyColor += job.anyColorPages;
+
+        // Billable Logic: If sig colors > 0, bill for ALL physical color pages (anyColor)
+        const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
+        totalBillable += billableCount;
 
         tr.innerHTML = `
             <td>${job.name}</td>
@@ -105,6 +110,7 @@ function renderTable() {
             <td>${job.totalPages ?? '-'}</td>
             <td>${job.colorPages ?? '-'}</td>
             <td>${job.anyColorPages ?? '-'}</td>
+            <td>${billableCount}</td>
             <td>${notesHtml || '-'}</td>
         `;
         if (resultsBody) resultsBody.appendChild(tr);
@@ -113,6 +119,7 @@ function renderTable() {
     if (sumTotalPagesEl) sumTotalPagesEl.textContent = totalP;
     if (sumColorNotesPagesEl) sumColorNotesPagesEl.textContent = colorWithNotes;
     if (sumAnyColorPagesEl) sumAnyColorPagesEl.textContent = totalAnyColor;
+    if (sumBillableColorEl) sumBillableColorEl.textContent = totalBillable;
 }
 
 // Ensure UI stays responsive by yielding
