@@ -19,6 +19,8 @@ const summarySection = document.getElementById('summarySection');
 const resTotalPagesEl = document.getElementById('resTotalPages');
 const resBillableColorEl = document.getElementById('resBillableColor');
 const resTotalBWEl = document.getElementById('resTotalBW');
+const resColorFilesEl = document.getElementById('resColorFiles');
+const resBWFilesEl = document.getElementById('resBWFiles');
 const resColorCostEl = document.getElementById('resColorCost');
 const resBWCostEl = document.getElementById('resBWCost');
 const resGrandTotalEl = document.getElementById('resGrandTotal');
@@ -33,7 +35,7 @@ const colorPriceInput = document.getElementById('colorPrice');
 const bwPriceInput = document.getElementById('bwPrice');
 
 function debugCheckElements() {
-    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnDownloadColor', 'btnDownloadBW', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorCost', 'resBWCost', 'resGrandTotal', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice'];
+    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnDownloadColor', 'btnDownloadBW', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorFiles', 'resBWFiles', 'resColorCost', 'resBWCost', 'resGrandTotal', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice'];
     console.log("--- DOM ELEMENT CHECK ---");
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -183,6 +185,16 @@ function updateSummary(totalP, totalBillable) {
     const colorPrice = parseFloat(colorPriceInput?.value || 0.59);
     const bwPrice = parseFloat(bwPriceInput?.value || 0.12);
     
+    let colorFileCount = 0;
+    let bwFileCount = 0;
+
+    for (const f of files) {
+        const job = jobResults[f.id];
+        const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
+        if (billableCount > 0) colorFileCount++;
+        else bwFileCount++;
+    }
+
     const totalBW = Math.max(0, totalP - totalBillable);
     const colorCost = totalBillable * colorPrice;
     const bwCost = totalBW * bwPrice;
@@ -191,6 +203,8 @@ function updateSummary(totalP, totalBillable) {
     if (resTotalPagesEl) resTotalPagesEl.textContent = totalP;
     if (resBillableColorEl) resBillableColorEl.textContent = totalBillable;
     if (resTotalBWEl) resTotalBWEl.textContent = totalBW;
+    if (resColorFilesEl) resColorFilesEl.textContent = colorFileCount;
+    if (resBWFilesEl) resBWFilesEl.textContent = bwFileCount;
     if (resColorCostEl) resColorCostEl.textContent = `$${colorCost.toFixed(2)}`;
     if (resBWCostEl) resBWCostEl.textContent = `$${bwCost.toFixed(2)}`;
     if (resGrandTotalEl) resGrandTotalEl.textContent = `$${grandTotal.toFixed(2)}`;

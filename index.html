@@ -43,11 +43,34 @@
         </section>
 
         <section class="summary hidden" id="summarySection">
-            <div class="summary-card consolidated">
-                <div class="summary-line">Total Pages: <span id="resTotalPages">0</span></div>
-                <div class="summary-line">Total Billable Color: <span id="resBillableColor">0</span> | Total B&W: <span id="resTotalBW">0</span></div>
-                <div class="summary-line">Color Cost: <span id="resColorCost">$0.00</span> | B&W Cost: <span id="resBWCost">$0.00</span></div>
-                <div class="summary-line grand-total-line">Grand Total Estimated Cost: <span id="resGrandTotal">$0.00</span></div>
+            <div class="summary-card modern-summary">
+                <div class="summary-header">
+                    <div class="summary-line main-pages">
+                        📄 Total Pages: <span id="resTotalPages">0</span>
+                    </div>
+                </div>
+                
+                <div class="summary-grid">
+                    <div class="summary-column color-col">
+                        <h3>🎨 Color Analysis</h3>
+                        <div class="summary-stat">Files: <span id="resColorFiles">0</span></div>
+                        <div class="summary-stat">Pages: <span id="resBillableColor">0</span></div>
+                        <div class="summary-stat">Cost: <span id="resColorCost">$0.00</span></div>
+                    </div>
+                    <div class="summary-column bw-col">
+                        <h3>⚪ B&W Analysis</h3>
+                        <div class="summary-stat">Files: <span id="resBWFiles">0</span></div>
+                        <div class="summary-stat">Pages: <span id="resTotalBW">0</span></div>
+                        <div class="summary-stat">Cost: <span id="resBWCost">$0.00</span></div>
+                    </div>
+                </div>
+
+                <div class="summary-footer">
+                    <div class="grand-total-container">
+                        <span class="label">Grand Total Estimated Cost</span>
+                        <span id="resGrandTotal" class="total-amount">$0.00</span>
+                    </div>
+                </div>
             </div>
         </section>
 
