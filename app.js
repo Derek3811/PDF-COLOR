@@ -5,6 +5,53 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 let files = [];
 let jobResults = {};
 
+const DB_NAME = 'PDFAnalyzR_DB';
+const STORE_NAME = 'files';
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            }
+        };
+        request.onsuccess = (e) => resolve(e.target.result);
+        request.onerror = (e) => reject(e.target.error);
+    });
+}
+
+async function saveFileToDB(id, file) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put({ id, file });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function getFileFromDB(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const request = tx.objectStore(STORE_NAME).get(id);
+        request.onsuccess = () => resolve(request.result?.file);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function clearFilesDB() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const btnTotalPages = document.getElementById('btnTotalPages');
@@ -84,9 +131,9 @@ dropZone.addEventListener('drop', async e => {
                 allFiles = allFiles.concat(folderFiles);
             }
         }
-        handleFiles(allFiles);
+        await handleFiles(allFiles);
     } else if (e.dataTransfer.files.length) {
-        handleFiles(e.dataTransfer.files);
+        await handleFiles(e.dataTransfer.files);
     }
 });
 
@@ -94,7 +141,8 @@ async function traverseFileTree(entry, path = "") {
     const files = [];
     async function internalTraverse(item, currentPath) {
         if (item.isFile) {
-            if (item.name.toLowerCase().endsWith('.pdf')) {
+            const name = item.name.toLowerCase();
+            if (name.endsWith('.pdf') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.tiff') || name.endsWith('.tif')) {
                 const file = await new Promise(res => item.file(res));
                 // Store relative path for drag and drop
                 file.filepath = currentPath + item.name;
@@ -116,8 +164,8 @@ async function traverseFileTree(entry, path = "") {
     return files;
 }
 
-fileInput.addEventListener('change', () => {
-    if (fileInput.files.length) handleFiles(fileInput.files);
+fileInput.addEventListener('change', async () => {
+    if (fileInput.files.length) await handleFiles(fileInput.files);
 });
 
 if (colorPriceInput) colorPriceInput.addEventListener('input', () => renderTable());
@@ -137,7 +185,7 @@ if (btnToggleDetails) {
     });
 }
 
-function handleFiles(newFiles) {
+async function handleFiles(newFiles) {
     const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.tif'];
     console.log("handleFiles triggered with count:", newFiles.length);
     for (const file of newFiles) {
@@ -145,7 +193,11 @@ function handleFiles(newFiles) {
         if (validExtensions.includes(ext) || file.type.startsWith('image/') || file.type === 'application/pdf') {
             const id = Math.random().toString(36).substring(7);
             const path = file.webkitRelativePath || file.filepath || file.name;
-            files.push({ id, file, path });
+            
+            // Save to IndexedDB and only keep metadata in memory
+            await saveFileToDB(id, file);
+            
+            files.push({ id, name: file.name, path: path });
             jobResults[id] = { 
                 name: file.name, 
                 path: path,
@@ -158,7 +210,7 @@ function handleFiles(newFiles) {
             };
         }
     }
-    console.log("Files state after upload:", files);
+    console.log("Files state after upload (metadata only):", files);
     renderTable();
     updateButtons();
 }
@@ -180,9 +232,11 @@ function updateButtons() {
     if (btnClear)    btnClear.disabled = !hasFiles || isProcessing;
 }
 
-btnClear.addEventListener('click', () => {
+btnClear.addEventListener('click', async () => {
     files = [];
     jobResults = {};
+    await clearFilesDB();
+    if (resultsBody) resultsBody.innerHTML = '';
     renderTable();
     updateButtons();
     if (summarySection) summarySection.classList.add('hidden');
@@ -481,14 +535,17 @@ async function processFiles(mode) {
         await yieldEventLoop();
         
         try {
-            const ext = f.file.name.substring(f.file.name.lastIndexOf('.')).toLowerCase();
+            const file = await getFileFromDB(f.id);
+            if (!file) throw new Error("File not found in storage");
+
+            const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
             
             if (ext === '.pdf') {
-                await handlePdfProcessing(f, job, mode, canvas, ctx);
+                await handlePdfProcessing(file, job, mode, canvas, ctx);
             } else if (['.jpg', '.jpeg', '.png'].includes(ext)) {
-                await handleImageProcessing(f, job, mode, canvas, ctx);
+                await handleImageProcessing(file, job, mode, canvas, ctx);
             } else if (['.tif', '.tiff'].includes(ext)) {
-                await handleTiffProcessing(f, job, mode, canvas, ctx);
+                await handleTiffProcessing(file, job, mode, canvas, ctx);
             }
             
             job.status = 'done';
@@ -502,8 +559,8 @@ async function processFiles(mode) {
     updateButtons();
 }
 
-async function handlePdfProcessing(f, job, mode, canvas, ctx) {
-    const arrayBuffer = await f.file.arrayBuffer();
+async function handlePdfProcessing(file, job, mode, canvas, ctx) {
+    const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
     job.totalPages = pdf.numPages;
     job.pages = [];
@@ -556,13 +613,13 @@ async function handlePdfProcessing(f, job, mode, canvas, ctx) {
     }
 }
 
-async function handleImageProcessing(f, job, mode, canvas, ctx) {
+async function handleImageProcessing(file, job, mode, canvas, ctx) {
     job.totalPages = 1;
     job.pages = [];
     if (mode === 'TOTAL_PAGES') return;
 
     const img = new Image();
-    const url = URL.createObjectURL(f.file);
+    const url = URL.createObjectURL(file);
     await new Promise((res, rej) => {
         img.onload = res;
         img.onerror = rej;
@@ -588,8 +645,8 @@ async function handleImageProcessing(f, job, mode, canvas, ctx) {
     });
 }
 
-async function handleTiffProcessing(f, job, mode, canvas, ctx) {
-    const arrayBuffer = await f.file.arrayBuffer();
+async function handleTiffProcessing(file, job, mode, canvas, ctx) {
+    const arrayBuffer = await file.arrayBuffer();
     const ifds = UTIF.decode(arrayBuffer);
     job.totalPages = ifds.length;
     job.pages = [];
@@ -652,11 +709,14 @@ async function downloadZip(type) {
         const isBW = billableCount === 0;
 
         if ((type === 'COLOR' && isColor) || (type === 'BW' && isBW)) {
-            // Using arrayBuffer to ensure JSZip gets the raw data reliably
-            const data = await f.file.arrayBuffer();
-            // Use f.path to recreate the original folder structure
-            zip.file(f.path, data);
-            count++;
+            // Retrieve raw file from IndexedDB for zipping
+            const file = await getFileFromDB(f.id);
+            if (file) {
+                const data = await file.arrayBuffer();
+                // Use f.path to recreate the original folder structure
+                zip.file(f.path, data);
+                count++;
+            }
         }
     }
 
