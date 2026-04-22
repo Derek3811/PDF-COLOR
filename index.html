@@ -22,12 +22,9 @@
             <sub class="helper-text">or click to browse</sub>
             <input type="file" id="fileInput" multiple accept=".pdf" webkitdirectory directory class="hidden">
         </section>
-
         <section class="controls">
             <button id="btnTotalPages" class="btn primary" disabled>Get Total Pages</button>
             <button id="btnColorPages" class="btn secondary" disabled>Detect Color Pages</button>
-            <button id="btnDownloadColor" class="btn success" disabled>Download Color Zip</button>
-            <button id="btnDownloadBW" class="btn info" disabled>Download B&W Zip</button>
             <button id="btnClear" class="btn ghost outline" disabled>Clear All</button>
         </section>
 
@@ -112,33 +109,46 @@
             </div>
         </section>
 
-        <section class="results">
-            <table class="data-table hidden" id="resultsTable">
-                <thead>
-                    <tr>
-                        <th>File Path</th>
-                        <th>Status</th>
-                        <th>Total Pages</th>
-                        <th>Color Pages (to print)</th>
-                        <th>Any Color Pages</th>
-                        <th>Billable Color</th>
-                        <th>Note</th>
-                    </tr>
-                </thead>
-                <tbody id="resultsBody">
-                    <!-- Dynamic rows will be inserted here -->
-                </tbody>
-                <tfoot id="resultsFooter" class="hidden">
-                    <tr>
-                        <td colspan="2">TOTALS</td>
-                        <td id="footTotalPages">0</td>
-                        <td id="footSigColor">10</td><!-- Dummy data to show structure -->
-                        <td id="footAnyColor">0</td>
-                        <td id="footBillable">0</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
+        <section class="download-actions hidden" id="downloadActions">
+            <button id="btnDownloadColor" class="btn success" disabled>Download Color Zip</button>
+            <button id="btnDownloadBW" class="btn info" disabled>Download B&W Zip</button>
+        </section>
+
+        <section class="details-section hidden" id="detailsSection">
+            <div class="details-toggle-wrapper">
+                <button id="btnToggleDetails" class="btn ghost outline small">
+                    <span class="toggle-icon">▶</span> View File Details
+                </button>
+            </div>
+            
+            <div class="results-collapsible" id="resultsCollapsible">
+                <table class="data-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>File Path</th>
+                            <th>Status</th>
+                            <th>Total Pages</th>
+                            <th>Color Pages (to print)</th>
+                            <th>Any Color Pages</th>
+                            <th>Billable Color</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <!-- Dynamic rows will be inserted here -->
+                    </tbody>
+                    <tfoot id="resultsFooter" class="hidden">
+                        <tr>
+                            <td colspan="2">TOTALS</td>
+                            <td id="footTotalPages">0</td>
+                            <td id="footSigColor">0</td>
+                            <td id="footAnyColor">0</td>
+                            <td id="footBillable">0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
         </section>
     </div>
     

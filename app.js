@@ -15,6 +15,10 @@ const btnClear = document.getElementById('btnClear');
 const resultsTable = document.getElementById('resultsTable');
 const resultsBody = document.getElementById('resultsBody');
 const summarySection = document.getElementById('summarySection');
+const downloadActions = document.getElementById('downloadActions');
+const detailsSection = document.getElementById('detailsSection');
+const btnToggleDetails = document.getElementById('btnToggleDetails');
+const resultsCollapsible = document.getElementById('resultsCollapsible');
 
 const resTotalPagesEl = document.getElementById('resTotalPages');
 const resBillableColorEl = document.getElementById('resBillableColor');
@@ -112,6 +116,16 @@ fileInput.addEventListener('change', () => {
 if (colorPriceInput) colorPriceInput.addEventListener('input', () => renderTable());
 if (bwPriceInput) bwPriceInput.addEventListener('input', () => renderTable());
 
+if (btnToggleDetails) {
+    btnToggleDetails.addEventListener('click', () => {
+        const isExpanded = resultsCollapsible.classList.toggle('expanded');
+        detailsSection.classList.toggle('expanded-state');
+        btnToggleDetails.innerHTML = isExpanded ? 
+            '<span class="toggle-icon">▼</span> Hide Itemized List' : 
+            '<span class="toggle-icon">▶</span> View File Details';
+    });
+}
+
 function handleFiles(newFiles) {
     console.log("handleFiles triggered with count:", newFiles.length);
     for (const file of newFiles) {
@@ -157,7 +171,13 @@ btnClear.addEventListener('click', () => {
     renderTable();
     updateButtons();
     if (summarySection) summarySection.classList.add('hidden');
-    if (resultsTable) resultsTable.classList.add('hidden');
+    if (downloadActions) downloadActions.classList.add('hidden');
+    if (detailsSection) {
+        detailsSection.classList.add('hidden');
+        detailsSection.classList.remove('expanded-state');
+    }
+    if (resultsCollapsible) resultsCollapsible.classList.remove('expanded');
+    if (btnToggleDetails) btnToggleDetails.innerHTML = '<span class="toggle-icon">▶</span> View File Details';
     if (resultsFooter) resultsFooter.classList.add('hidden');
 });
 
@@ -166,10 +186,14 @@ function renderTable() {
     let totalP = 0, totalSig = 0, totalAny = 0, totalBil = 0;
     
     if (files.length > 0) {
-        if (resultsTable) resultsTable.classList.remove('hidden');
+        if (summarySection) summarySection.classList.remove('hidden');
+        if (downloadActions) downloadActions.classList.remove('hidden');
+        if (detailsSection) detailsSection.classList.remove('hidden');
         if (resultsFooter) resultsFooter.classList.remove('hidden');
     } else {
-        if (resultsTable) resultsTable.classList.add('hidden');
+        if (summarySection) summarySection.classList.add('hidden');
+        if (downloadActions) downloadActions.classList.add('hidden');
+        if (detailsSection) detailsSection.classList.add('hidden');
         if (resultsFooter) resultsFooter.classList.add('hidden');
     }
     

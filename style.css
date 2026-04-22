@@ -386,3 +386,57 @@ header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 0.5rem; }
 .inline-edit-input::-webkit-inner-spin-button {
     opacity: 1;
 }
+
+/* Download Actions */
+.download-actions {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+}
+
+/* Details Section (Accordion) */
+.details-section {
+    margin-top: 1rem;
+    margin-bottom: 3rem;
+}
+
+.details-toggle-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.btn.small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.toggle-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    margin-right: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.results-collapsible {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0, 1, 0, 1);
+}
+
+.results-collapsible.expanded {
+    max-height: 5000px; /* Large enough for many rows */
+    transition: max-height 0.5s ease-in;
+    margin-top: 1rem;
+}
+
+.expanded-state .toggle-icon {
+    transform: rotate(90deg);
+}
