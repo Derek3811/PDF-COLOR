@@ -8,6 +8,7 @@
     <!-- Include pdf.js from CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -18,9 +19,9 @@
 
         <section class="drop-zone" id="dropZone">
             <span class="icon">📁</span>
-            <p>Drag & Drop hundreds of PDFs here</p>
-            <sub class="helper-text">or click to browse</sub>
-            <input type="file" id="fileInput" multiple accept=".pdf" webkitdirectory directory class="hidden">
+            <p>Drag & Drop PDFs or Images</p>
+            <sub class="helper-text">PDF, JPG, PNG, TIFF</sub>
+            <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif" webkitdirectory directory class="hidden">
         </section>
         <section class="controls">
             <button id="btnTotalPages" class="btn primary" disabled>Get Total Pages</button>

@@ -128,9 +128,11 @@ if (btnToggleDetails) {
 }
 
 function handleFiles(newFiles) {
+    const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.tif'];
     console.log("handleFiles triggered with count:", newFiles.length);
     for (const file of newFiles) {
-        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        if (validExtensions.includes(ext) || file.type.startsWith('image/') || file.type === 'application/pdf') {
             const id = Math.random().toString(36).substring(7);
             const path = file.webkitRelativePath || file.filepath || file.name;
             files.push({ id, file, path });
@@ -331,6 +333,67 @@ function updateSummary(totalP, totalBillable) {
 // Ensure UI stays responsive by yielding
 const yieldEventLoop = () => new Promise(r => setTimeout(r, 0));
 
+function analyzePixels(imgData, w, h) {
+    let isColor = false;
+    let isAnyColorPage = false;
+    
+    let colorfulPixelCount = 0;
+    let uniqueColorBuckets = new Set();
+    let yellowPixels = 0;
+    let exhibitStickerPixels = 0;
+    let genericColorPixels = 0;
+    
+    const top15 = Math.floor(h * 0.15);
+    const right20 = Math.floor(w * 0.80);
+    const bottom20 = Math.floor(h * 0.80);
+    
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const idx = (y * w + x) * 4;
+            if (imgData[idx+3] < 10) continue; 
+            
+            const r = imgData[idx];
+            const g = imgData[idx+1];
+            const b = imgData[idx+2];
+            
+            const maxCh = Math.max(r,g,b);
+            const minCh = Math.min(r,g,b);
+            const diff = maxCh - minCh;
+            
+            if (diff > 15) isAnyColorPage = true;
+            if (y < top15) continue;
+            if (diff > 15) genericColorPixels++;
+            
+            if (r < 240 || g < 240 || b < 240) {
+                if (diff > 5) {
+                    colorfulPixelCount++;
+                    const bucket = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+                    uniqueColorBuckets.add(bucket);
+                }
+            }
+            
+            if (diff > 5) {
+                let hue = 0;
+                if (maxCh === r) hue = (g - b) / diff;
+                else if (maxCh === g) hue = 2.0 + (b - r) / diff;
+                else hue = 4.0 + (r - g) / diff;
+                hue *= 60;
+                if (hue < 0) hue += 360;
+                if (hue >= 40 && hue <= 70) yellowPixels++;
+            }
+            
+            if (x >= right20 && y >= bottom20) {
+                if (diff > 25) exhibitStickerPixels++;
+            }
+        }
+    }
+if (yellowPixels > 40) isColor = true;
+    if (exhibitStickerPixels > 50) isColor = true;
+    if (genericColorPixels > 80) isColor = true;
+
+    return { isColor, isAnyColorPage, colorfulPixelCount, uniqueColorBucketsSize: uniqueColorBuckets.size };
+}
+
 async function processFiles(mode) {
     console.log("processFiles triggered! Mode:", mode, "Files count:", files.length);
     if (summarySection) summarySection.classList.remove('hidden');
@@ -338,12 +401,10 @@ async function processFiles(mode) {
     if (btnTotalPages) btnTotalPages.disabled = true;
     if (btnColorPages) btnColorPages.disabled = true;
 
-    // Use a single invisible canvas
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
     for (const f of files) {
-        console.log("Processing file:", f.file.name);
         const job = jobResults[f.id];
         if (job.status === 'done') continue;
         
@@ -352,227 +413,157 @@ async function processFiles(mode) {
         await yieldEventLoop();
         
         try {
-            const arrayBuffer = await f.file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-            const numPages = pdf.numPages;
-            job.totalPages = numPages;
+            const ext = f.file.name.substring(f.file.name.lastIndexOf('.')).toLowerCase();
             
-            if (mode === 'TOTAL_PAGES') {
-                job.status = 'done';
-                renderTable();
-                continue;
+            if (ext === '.pdf') {
+                await handlePdfProcessing(f, job, mode, canvas, ctx);
+            } else if (['.jpg', '.jpeg', '.png'].includes(ext)) {
+                await handleImageProcessing(f, job, mode, canvas, ctx);
+            } else if (['.tif', '.tiff'].includes(ext)) {
+                await handleTiffProcessing(f, job, mode, canvas, ctx);
             }
-            
-            let colorPages = 0;
-            let anyColorPages = 0;
-            let hasPhoto = false;
-            let hasGraphic = false;
-            let hasHighlight = false;
-            let hasExhibit = false;
-            let hasChart = false;
-            
-            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-                const page = await pdf.getPage(pageNum);
-                
-                let pageHasHighlight = false;
-                let pageHasExhibit = false;
-                
-                // 1. Analyze Annotations & Text
-                const annotations = await page.getAnnotations();
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map(i => i.str).join(' ').toLowerCase();
-
-                // Note: We deliberately do NOT search pageText for 'exhibit' to avoid falsely flagging pages that just mention it in the footer.
-                
-                for (const ann of annotations) {
-                    if (ann.subtype === 'Highlight') {
-                        pageHasHighlight = true;
-                        hasHighlight = true;
-                    }
-                    if (ann.contents && ann.contents.toLowerCase().includes('exhibit')) {
-                        pageHasExhibit = true;
-                        hasExhibit = true;
-                    }
-                }
-                
-                // 2. Analyze Operators
-                const opList = await page.getOperatorList();
-                let vectorCount = 0;
-                let hasText = false;
-                let pageHasImageOp = false;
-                
-                for (let i = 0; i < opList.fnArray.length; i++) {
-                    const fn = opList.fnArray[i];
-                    if (fn === pdfjsLib.OPS.paintImageXObject || fn === pdfjsLib.OPS.paintJpegXObject) {
-                        pageHasImageOp = true;
-                    }
-                    if (fn === pdfjsLib.OPS.fill || fn === pdfjsLib.OPS.stroke || fn === pdfjsLib.OPS.eofill) {
-                        vectorCount++;
-                    }
-                    if (fn === pdfjsLib.OPS.showText || fn === pdfjsLib.OPS.showSpacedText) {
-                        hasText = true;
-                    }
-                }
-                
-                if (vectorCount > 50) {
-                    if (hasText) hasChart = true;
-                    else hasGraphic = true;
-                }
-                
-                // 3. Render and detect color (scale 0.2 represents large pixel groupings making it very fast)
-                const viewport = page.getViewport({ scale: 0.2 });
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                
-                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-                
-                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                let isColor = false;
-                let isAnyColorPage = false;
-                
-                let colorfulPixelCount = 0;
-                let uniqueColorBuckets = new Set();
-                let yellowPixels = 0;
-                let exhibitStickerPixels = 0;
-                let genericColorPixels = 0;
-                
-                const w = canvas.width;
-                const h = canvas.height;
-                const top15 = Math.floor(h * 0.15);
-                const right20 = Math.floor(w * 0.80);
-                const bottom20 = Math.floor(h * 0.80);
-                
-                for (let y = 0; y < h; y++) {
-                    for (let x = 0; x < w; x++) {
-                        const idx = (y * w + x) * 4;
-                        if (imgData[idx+3] < 10) continue; // Check alpha
-                        
-                        const r = imgData[idx];
-                        const g = imgData[idx+1];
-                        const b = imgData[idx+2];
-                        
-                        const maxCh = Math.max(r,g,b);
-                        const minCh = Math.min(r,g,b);
-                        const diff = maxCh - minCh;
-                        
-                        // Track ANY color (including top area, logos, etc)
-                        if (diff > 15) {
-                            isAnyColorPage = true;
-                        }
-
-                        // 1. Coordinate filtering: Skip top 15% (exclude logos)
-                        if (y < top15) continue;
-                        
-                        // Gather color mass
-                        if (diff > 15) {
-                            genericColorPixels++;
-                        }
-                        
-                        // Advanced heuristic for photograph detection
-                        if (r < 240 || g < 240 || b < 240) { // Ignore white-ish background
-                            if (diff > 5) { // Ensure there is some localized color saturation
-                                colorfulPixelCount++;
-                                const bucket = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
-                                uniqueColorBuckets.add(bucket);
-                            }
-                        }
-                        
-                        // 2. HSV pale yellow detection (Hue 45-65) even with low saturation
-                        if (diff > 5) { // Any measurable color difference
-                            let hue = 0;
-                            if (maxCh === r) {
-                                hue = (g - b) / diff;
-                            } else if (maxCh === g) {
-                                hue = 2.0 + (b - r) / diff;
-                            } else {
-                                hue = 4.0 + (r - g) / diff;
-                            }
-                            hue *= 60;
-                            if (hue < 0) hue += 360;
-                            
-                            if (hue >= 40 && hue <= 70) {
-                                yellowPixels++;
-                            }
-                        }
-                        
-                        // 4. Secondary deep scan on bottom-right 20% for exhibit stickers
-                        if (x >= right20 && y >= bottom20) {
-                            if (diff > 25) { // Distinct color marker in exhibit region
-                                exhibitStickerPixels++;
-                            }
-                        }
-                    }
-                }
-                
-                // 3. Grouping determination (Threshold) checking for block presence
-                // Require significant pixel mass to avoid scan noise (e.g., 250+ pixels = ~1 sq inch area)
-                if (yellowPixels > 40) {
-                    pageHasHighlight = true;
-                    hasHighlight = true;
-                }
-                
-                if (exhibitStickerPixels > 50) {
-                    pageHasExhibit = true;
-                    hasExhibit = true;
-                }
-                
-                if (pageHasHighlight || pageHasExhibit) {
-                    isColor = true;
-                }
-                
-                // Demand sufficient color mass to justify color printing (excludes tiny logos, colored bates stamps)
-                // 300 pixels at 0.2 scale (~1.5 sq inches text)
-                if (genericColorPixels > 80) {
-                    isColor = true;
-                }
-                
-                if (isColor) colorPages++;
-                if (isAnyColorPage) anyColorPages++;
-
-                if (yellowPixels > 0 || genericColorPixels > 0) {
-                    console.log(`[DEBUG] Page ${pageNum}: YellowPixels=${yellowPixels}, GenericColor=${genericColorPixels}, ExhibitSticker=${exhibitStickerPixels} -> isColor=${isColor}`);
-                }
-                
-                if (pageHasImageOp && !hasPhoto) {
-                    // A "real photograph" or phone scan must contain significant noise and grouping.
-                    const totalAreaPixels = canvas.width * canvas.height;
-                    // Catch color images/photos
-                    if (colorfulPixelCount > (totalAreaPixels * 0.02) && uniqueColorBuckets.size > 50) {
-                        hasPhoto = true;
-                    } 
-                    // Catch very noisy or grayscale phone scans (where > 30% of the page is off-white)
-                    else if (colorfulPixelCount > (totalAreaPixels * 0.30)) {
-                        hasPhoto = true;
-                    }
-                }
-                
-                // Yield occasionally to keep UI spiffy
-                if (pageNum % 5 === 0) await yieldEventLoop();
-            }
-            
-            job.colorPages = colorPages;
-            job.anyColorPages = anyColorPages;
-            
-            const notesArray = [];
-            if (hasPhoto) {
-                notesArray.push('scanned with photo');
-            } else {
-                if (hasGraphic) notesArray.push('contains graphic');
-                if (hasChart) notesArray.push('contains chart');
-                if (hasHighlight) notesArray.push('contains highlight');
-                if (hasExhibit) notesArray.push('exhibit sticker');
-            }
-            job.note = notesArray.join(', ');
             
             job.status = 'done';
         } catch (err) {
-            console.error('Error processing PDF:', err);
+            console.error('Error processing file:', err);
             job.status = 'error';
         }
         renderTable();
     }
     
     updateButtons();
+}
+
+async function handlePdfProcessing(f, job, mode, canvas, ctx) {
+    const arrayBuffer = await f.file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+    job.totalPages = pdf.numPages;
+    
+    if (mode === 'TOTAL_PAGES') return;
+    
+    let colorPages = 0;
+    let anyColorPages = 0;
+    let hasPhoto = false, hasGraphic = false, hasHighlight = false, hasExhibit = false, hasChart = false;
+    
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const annotations = await page.getAnnotations();
+        for (const ann of annotations) {
+            if (ann.subtype === 'Highlight') hasHighlight = true;
+            if (ann.contents && ann.contents.toLowerCase().includes('exhibit')) hasExhibit = true;
+        }
+        
+        const opList = await page.getOperatorList();
+        let vectorCount = 0, hasText = false;
+        for (let i = 0; i < opList.fnArray.length; i++) {
+            const fn = opList.fnArray[i];
+            if (fn === pdfjsLib.OPS.fill || fn === pdfjsLib.OPS.stroke || fn === pdfjsLib.OPS.eofill) vectorCount++;
+            if (fn === pdfjsLib.OPS.showText || fn === pdfjsLib.OPS.showSpacedText) hasText = true;
+        }
+        if (vectorCount > 50) {
+            if (hasText) hasChart = true;
+            else hasGraphic = true;
+        }
+        
+        const viewport = page.getViewport({ scale: 0.2 });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const analysis = analyzePixels(imgData, canvas.width, canvas.height);
+        
+        if (analysis.isColor) colorPages++;
+        if (analysis.isAnyColorPage) anyColorPages++;
+        if (analysis.colorfulPixelCount > 500 && analysis.uniqueColorBucketsSize > 300) hasPhoto = true;
+        
+        if (pageNum % 5 === 0) await yieldEventLoop();
+    }
+    
+    job.colorPages = colorPages;
+    job.anyColorPages = anyColorPages;
+    
+    const notesArray = [];
+    if (hasPhoto) notesArray.push('scanned with photo');
+    else {
+        if (hasGraphic) notesArray.push('contains graphic');
+        if (hasChart) notesArray.push('contains chart');
+        if (hasHighlight) notesArray.push('contains highlight');
+        if (hasExhibit) notesArray.push('exhibit sticker');
+    }
+    job.note = notesArray.join(', ');
+}
+
+async function handleImageProcessing(f, job, mode, canvas, ctx) {
+    job.totalPages = 1;
+    if (mode === 'TOTAL_PAGES') return;
+
+    const img = new Image();
+    const url = URL.createObjectURL(f.file);
+    await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = rej;
+        img.src = url;
+    });
+    
+    const scale = Math.min(1, 200 / Math.max(img.width, img.height));
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const analysis = analyzePixels(imgData, canvas.width, canvas.height);
+    
+    job.colorPages = analysis.isColor ? 1 : 0;
+    job.anyColorPages = analysis.isAnyColorPage ? 1 : 0;
+    job.note = (analysis.colorfulPixelCount > 500 && analysis.uniqueColorBucketsSize > 300) ? 'scanned with photo' : '';
+}
+
+async function handleTiffProcessing(f, job, mode, canvas, ctx) {
+    const arrayBuffer = await f.file.arrayBuffer();
+    const ifds = UTIF.decode(arrayBuffer);
+    job.totalPages = ifds.length;
+    
+    if (mode === 'TOTAL_PAGES') return;
+    
+    let colorPages = 0;
+    let anyColorPages = 0;
+    let hasPhoto = false;
+    
+    for (let i = 0; i < ifds.length; i++) {
+        const ifd = ifds[i];
+        UTIF.decodeImage(arrayBuffer, ifd);
+        const rgba = UTIF.toRGBA8(ifd);
+        
+        const scale = Math.min(1, 200 / Math.max(ifd.width, ifd.height));
+        canvas.width = ifd.width * scale;
+        canvas.height = ifd.height * scale;
+        
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = ifd.width;
+        tempCanvas.height = ifd.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        const imgDataObj = tempCtx.createImageData(ifd.width, ifd.height);
+        imgDataObj.data.set(rgba);
+        tempCtx.putImageData(imgDataObj, 0, 0);
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+        
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const analysis = analyzePixels(imgData, canvas.width, canvas.height);
+        
+        if (analysis.isColor) colorPages++;
+        if (analysis.isAnyColorPage) anyColorPages++;
+        if (analysis.colorfulPixelCount > 500 && analysis.uniqueColorBucketsSize > 300) hasPhoto = true;
+        
+        if (i % 2 === 0) await yieldEventLoop();
+    }
+    
+    job.colorPages = colorPages;
+    job.anyColorPages = anyColorPages;
+    job.note = hasPhoto ? 'scanned with photo' : '';
 }
 
 btnTotalPages.addEventListener('click', () => processFiles('TOTAL_PAGES'));
