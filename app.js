@@ -49,8 +49,14 @@ const footBillableEl = document.getElementById('footBillable');
 const colorPriceInput = document.getElementById('colorPrice');
 const bwPriceInput = document.getElementById('bwPrice');
 
+const checkPhotos = document.getElementById('checkPhotos');
+const checkCharts = document.getElementById('checkCharts');
+const checkHighlights = document.getElementById('checkHighlights');
+const checkStickers = document.getElementById('checkStickers');
+const checkText = document.getElementById('checkText');
+
 function debugCheckElements() {
-    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnDownloadColor', 'btnDownloadBW', 'btnDownloadCSV', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorFiles', 'resBWFiles', 'resColorCost', 'resBWCost', 'resGrandTotal', 'resTotalPagesAuto', 'resBillableColorAuto', 'resTotalBWAuto', 'resColorFilesAuto', 'resBWFilesAuto', 'resColorCostAuto', 'resBWCostAuto', 'resGrandTotalAuto', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice'];
+    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnDownloadColor', 'btnDownloadBW', 'btnDownloadCSV', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorFiles', 'resBWFiles', 'resColorCost', 'resBWCost', 'resGrandTotal', 'resTotalPagesAuto', 'resBillableColorAuto', 'resTotalBWAuto', 'resColorFilesAuto', 'resBWFilesAuto', 'resColorCostAuto', 'resBWCostAuto', 'resGrandTotalAuto', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice', 'checkPhotos', 'checkCharts', 'checkHighlights', 'checkStickers', 'checkText'];
     console.log("--- DOM ELEMENT CHECK ---");
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -117,6 +123,10 @@ fileInput.addEventListener('change', () => {
 if (colorPriceInput) colorPriceInput.addEventListener('input', () => renderTable());
 if (bwPriceInput) bwPriceInput.addEventListener('input', () => renderTable());
 
+[checkPhotos, checkCharts, checkHighlights, checkStickers, checkText].forEach(cb => {
+    if (cb) cb.addEventListener('change', () => renderTable());
+});
+
 if (btnToggleDetails) {
     btnToggleDetails.addEventListener('click', () => {
         const isExpanded = resultsCollapsible.classList.toggle('expanded');
@@ -143,7 +153,8 @@ function handleFiles(newFiles) {
                 totalPages: null, 
                 colorPages: null, 
                 anyColorPages: null, 
-                note: '' 
+                note: '',
+                pages: [] // To store { isAny, isPhoto, isChart, isHighlight, isExhibit, isGeneric }
             };
         }
     }
@@ -185,6 +196,43 @@ btnClear.addEventListener('click', () => {
     if (resultsFooter) resultsFooter.classList.add('hidden');
 });
 
+function getDetectionSummary(job) {
+    const showPhotos = checkPhotos.checked;
+    const showCharts = checkCharts.checked;
+    const showHighlights = checkHighlights.checked;
+    const showStickers = checkStickers.checked;
+    const showText = checkText.checked;
+
+    let colorPagesCount = 0;
+    let anyColorPagesCount = 0;
+    let activeNotes = new Set();
+
+    if (!job.pages || job.pages.length === 0) {
+        return { colorCount: job.colorPages || 0, anyCount: job.anyColorPages || 0, note: job.note || '' };
+    }
+
+    job.pages.forEach(p => {
+        let triggers = [];
+        if (showPhotos && p.isPhoto) triggers.push('photo');
+        if (showCharts && p.isChart) triggers.push('chart/graphic');
+        if (showHighlights && p.isHighlight) triggers.push('highlight');
+        if (showStickers && p.isExhibit) triggers.push('exhibit sticker');
+        if (showText && p.isGeneric) triggers.push('colored text');
+
+        if (triggers.length > 0) {
+            colorPagesCount++;
+            triggers.forEach(t => activeNotes.add(t));
+        }
+        if (p.isAny) anyColorPagesCount++;
+    });
+
+    return { 
+        colorCount: colorPagesCount, 
+        anyCount: anyColorPagesCount, 
+        note: Array.from(activeNotes).join(', ') 
+    };
+}
+
 function renderTable() {
     if (resultsBody) resultsBody.innerHTML = '';
     let totalP = 0, totalSig = 0, totalAny = 0, totalBil = 0;
@@ -205,28 +253,39 @@ function renderTable() {
         const job = jobResults[f.id];
         const tr = document.createElement('tr');
         
-        let notesHtml = '';
-        if (job.note) {
-            const splitted = job.note.split(', ');
-            notesHtml = splitted.map(n => `<span class="note-tag">${n}</span>`).join('');
+        const summary = getDetectionSummary(job);
+        
+        // If manual override exists and detection is done, we usually respect manual.
+        // But for this request, we are primarily driven by checkboxes.
+        // To handle manual override correctly: if colorPages is null, use detected.
+        const detectedColor = summary.colorCount;
+        if (job.colorPages === null && job.status === 'done') {
+             job.colorPages = detectedColor;
+             job.anyColorPages = summary.anyCount;
+             job.note = summary.note;
         }
-        if (job.totalPages) totalP += job.totalPages;
-        if (job.colorPages) totalSig += job.colorPages;
-        if (job.anyColorPages) totalAny += job.anyColorPages;
 
-        const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
+        const displayColor = (job.colorPages !== null) ? job.colorPages : (job.status === 'done' ? summary.colorCount : 0);
+        const displayAny = (job.anyColorPages !== null) ? job.anyColorPages : (job.status === 'done' ? summary.anyCount : 0);
+        const displayNote = (job.status === 'done') ? summary.note : '';
+
+        totalP += (job.totalPages || 0);
+        totalSig += displayColor;
+        totalAny += displayAny;
+
+        const billableCount = (displayColor > 0) ? (displayAny || 0) : 0;
         totalBil += billableCount;
 
-        const colorInputHtml = `<input type="number" class="inline-edit-input" value="${job.colorPages ?? 0}" min="0" max="${job.totalPages || 9999}" data-id="${f.id}">`;
+        const colorInputHtml = `<input type="number" class="inline-edit-input" value="${displayColor}" min="0" max="${job.totalPages || 9999}" data-id="${f.id}">`;
 
         tr.innerHTML = `
             <td title="${job.path}">${job.path}</td>
             <td><span class="status-badge ${job.status}">${job.status}</span></td>
             <td>${job.totalPages ?? '-'}</td>
             <td>${colorInputHtml}</td>
-            <td>${job.anyColorPages ?? '-'}</td>
+            <td>${displayAny ?? '-'}</td>
             <td>${billableCount}</td>
-            <td>${(billableCount > 0) ? (notesHtml || '-') : '-'}</td>
+            <td>${(billableCount > 0) ? (displayNote || '-') : '-'}</td>
         `;
         if (resultsBody) resultsBody.appendChild(tr);
     }
@@ -284,14 +343,18 @@ function updateSummary(totalP, totalBillable) {
 
     for (const f of files) {
         const job = jobResults[f.id];
+        const summary = getDetectionSummary(job);
         
+        const displayColor = (job.colorPages !== null) ? job.colorPages : (job.status === 'done' ? summary.colorCount : 0);
+        const displayAny = (job.anyColorPages !== null) ? job.anyColorPages : (job.status === 'done' ? summary.anyCount : 0);
+
         // Manual logic (based on Billable Color)
-        const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
+        const billableCount = (displayColor > 0) ? (displayAny || 0) : 0;
         if (billableCount > 0) colorFileCount++;
         else bwFileCount++;
 
         // Auto logic (based on Any Color Pages)
-        const anyCount = job.anyColorPages || 0;
+        const anyCount = displayAny || 0;
         totalAnyColorPages += anyCount;
         if (anyCount > 0) colorFileCountAuto++;
         else bwFileCountAuto++;
@@ -334,8 +397,11 @@ function updateSummary(totalP, totalBillable) {
 const yieldEventLoop = () => new Promise(r => setTimeout(r, 0));
 
 function analyzePixels(imgData, w, h) {
-    let isColor = false;
     let isAnyColorPage = false;
+    let isPhoto = false;
+    let isHighlight = false;
+    let isExhibit = false;
+    let isGeneric = false;
     
     let colorfulPixelCount = 0;
     let uniqueColorBuckets = new Set();
@@ -387,11 +453,13 @@ function analyzePixels(imgData, w, h) {
             }
         }
     }
-if (yellowPixels > 40) isColor = true;
-    if (exhibitStickerPixels > 50) isColor = true;
-    if (genericColorPixels > 80) isColor = true;
+    
+    if (yellowPixels > 40) isHighlight = true;
+    if (exhibitStickerPixels > 50) isExhibit = true;
+    if (genericColorPixels > 80) isGeneric = true;
+    if (colorfulPixelCount > 500 && uniqueColorBuckets.size > 300) isPhoto = true;
 
-    return { isColor, isAnyColorPage, colorfulPixelCount, uniqueColorBucketsSize: uniqueColorBuckets.size };
+    return { isAnyColorPage, isPhoto, isHighlight, isExhibit, isGeneric };
 }
 
 async function processFiles(mode) {
@@ -438,19 +506,21 @@ async function handlePdfProcessing(f, job, mode, canvas, ctx) {
     const arrayBuffer = await f.file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
     job.totalPages = pdf.numPages;
+    job.pages = [];
     
     if (mode === 'TOTAL_PAGES') return;
     
-    let colorPages = 0;
-    let anyColorPages = 0;
-    let hasPhoto = false, hasGraphic = false, hasHighlight = false, hasExhibit = false, hasChart = false;
-    
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
+        let pageIsHighlight = false;
+        let pageIsExhibit = false;
+        let pageIsChart = false;
+        let pageIsGraphic = false;
+
         const annotations = await page.getAnnotations();
         for (const ann of annotations) {
-            if (ann.subtype === 'Highlight') hasHighlight = true;
-            if (ann.contents && ann.contents.toLowerCase().includes('exhibit')) hasExhibit = true;
+            if (ann.subtype === 'Highlight') pageIsHighlight = true;
+            if (ann.contents && ann.contents.toLowerCase().includes('exhibit')) pageIsExhibit = true;
         }
         
         const opList = await page.getOperatorList();
@@ -461,8 +531,8 @@ async function handlePdfProcessing(f, job, mode, canvas, ctx) {
             if (fn === pdfjsLib.OPS.showText || fn === pdfjsLib.OPS.showSpacedText) hasText = true;
         }
         if (vectorCount > 50) {
-            if (hasText) hasChart = true;
-            else hasGraphic = true;
+            if (hasText) pageIsChart = true;
+            else pageIsGraphic = true;
         }
         
         const viewport = page.getViewport({ scale: 0.2 });
@@ -473,29 +543,22 @@ async function handlePdfProcessing(f, job, mode, canvas, ctx) {
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         const analysis = analyzePixels(imgData, canvas.width, canvas.height);
         
-        if (analysis.isColor) colorPages++;
-        if (analysis.isAnyColorPage) anyColorPages++;
-        if (analysis.colorfulPixelCount > 500 && analysis.uniqueColorBucketsSize > 300) hasPhoto = true;
+        job.pages.push({
+            isAny: analysis.isAnyColorPage,
+            isPhoto: analysis.isPhoto,
+            isChart: pageIsChart || pageIsGraphic,
+            isHighlight: analysis.isHighlight || pageIsHighlight,
+            isExhibit: analysis.isExhibit || pageIsExhibit,
+            isGeneric: analysis.isGeneric
+        });
         
         if (pageNum % 5 === 0) await yieldEventLoop();
     }
-    
-    job.colorPages = colorPages;
-    job.anyColorPages = anyColorPages;
-    
-    const notesArray = [];
-    if (hasPhoto) notesArray.push('scanned with photo');
-    else {
-        if (hasGraphic) notesArray.push('contains graphic');
-        if (hasChart) notesArray.push('contains chart');
-        if (hasHighlight) notesArray.push('contains highlight');
-        if (hasExhibit) notesArray.push('exhibit sticker');
-    }
-    job.note = notesArray.join(', ');
 }
 
 async function handleImageProcessing(f, job, mode, canvas, ctx) {
     job.totalPages = 1;
+    job.pages = [];
     if (mode === 'TOTAL_PAGES') return;
 
     const img = new Image();
@@ -515,21 +578,23 @@ async function handleImageProcessing(f, job, mode, canvas, ctx) {
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     const analysis = analyzePixels(imgData, canvas.width, canvas.height);
     
-    job.colorPages = analysis.isColor ? 1 : 0;
-    job.anyColorPages = analysis.isAnyColorPage ? 1 : 0;
-    job.note = (analysis.colorfulPixelCount > 500 && analysis.uniqueColorBucketsSize > 300) ? 'scanned with photo' : '';
+    job.pages.push({
+        isAny: analysis.isAnyColorPage,
+        isPhoto: analysis.isPhoto,
+        isChart: false,
+        isHighlight: analysis.isHighlight,
+        isExhibit: analysis.isExhibit,
+        isGeneric: analysis.isGeneric
+    });
 }
 
 async function handleTiffProcessing(f, job, mode, canvas, ctx) {
     const arrayBuffer = await f.file.arrayBuffer();
     const ifds = UTIF.decode(arrayBuffer);
     job.totalPages = ifds.length;
+    job.pages = [];
     
     if (mode === 'TOTAL_PAGES') return;
-    
-    let colorPages = 0;
-    let anyColorPages = 0;
-    let hasPhoto = false;
     
     for (let i = 0; i < ifds.length; i++) {
         const ifd = ifds[i];
@@ -554,16 +619,17 @@ async function handleTiffProcessing(f, job, mode, canvas, ctx) {
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         const analysis = analyzePixels(imgData, canvas.width, canvas.height);
         
-        if (analysis.isColor) colorPages++;
-        if (analysis.isAnyColorPage) anyColorPages++;
-        if (analysis.colorfulPixelCount > 500 && analysis.uniqueColorBucketsSize > 300) hasPhoto = true;
+        job.pages.push({
+            isAny: analysis.isAnyColorPage,
+            isPhoto: analysis.isPhoto,
+            isChart: false,
+            isHighlight: analysis.isHighlight,
+            isExhibit: analysis.isExhibit,
+            isGeneric: analysis.isGeneric
+        });
         
         if (i % 2 === 0) await yieldEventLoop();
     }
-    
-    job.colorPages = colorPages;
-    job.anyColorPages = anyColorPages;
-    job.note = hasPhoto ? 'scanned with photo' : '';
 }
 
 btnTotalPages.addEventListener('click', () => processFiles('TOTAL_PAGES'));
@@ -575,7 +641,12 @@ async function downloadZip(type) {
 
     for (const f of files) {
         const job = jobResults[f.id];
-        const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
+        const summary = getDetectionSummary(job);
+        
+        const displayColor = (job.colorPages !== null) ? job.colorPages : (job.status === 'done' ? summary.colorCount : 0);
+        const displayAny = (job.anyColorPages !== null) ? job.anyColorPages : (job.status === 'done' ? summary.anyCount : 0);
+
+        const billableCount = (displayColor > 0) ? (displayAny || 0) : 0;
         
         const isColor = billableCount > 0;
         const isBW = billableCount === 0;
@@ -609,13 +680,18 @@ async function downloadCSV() {
     
     for (const f of files) {
         const job = jobResults[f.id];
-        const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
+        const summary = getDetectionSummary(job);
+        
+        const displayColor = (job.colorPages !== null) ? job.colorPages : (job.status === 'done' ? summary.colorCount : 0);
+        const displayAny = (job.anyColorPages !== null) ? job.anyColorPages : (job.status === 'done' ? summary.anyCount : 0);
+        
+        const billableCount = (displayColor > 0) ? (displayAny || 0) : 0;
         
         // Wrap notes and path in quotes to handle commas
-        const note = job.note ? `"${job.note}"` : '';
+        const note = (job.status === 'done') ? `"${summary.note}"` : '';
         const path = `"${job.path}"`;
         
-        csv += `${path},${job.totalPages || 0},${job.colorPages || 0},${job.anyColorPages || 0},${billableCount},${note}\n`;
+        csv += `${path},${job.totalPages || 0},${displayColor},${displayAny},${billableCount},${note}\n`;
     }
 
     const blob = new Blob([csv], { type: 'text/csv' });
