@@ -11,6 +11,7 @@ const btnTotalPages = document.getElementById('btnTotalPages');
 const btnColorPages = document.getElementById('btnColorPages');
 const btnDownloadColor = document.getElementById('btnDownloadColor');
 const btnDownloadBW = document.getElementById('btnDownloadBW');
+const btnDownloadCSV = document.getElementById('btnDownloadCSV');
 const btnClear = document.getElementById('btnClear');
 const resultsTable = document.getElementById('resultsTable');
 const resultsBody = document.getElementById('resultsBody');
@@ -49,7 +50,7 @@ const colorPriceInput = document.getElementById('colorPrice');
 const bwPriceInput = document.getElementById('bwPrice');
 
 function debugCheckElements() {
-    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnDownloadColor', 'btnDownloadBW', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorFiles', 'resBWFiles', 'resColorCost', 'resBWCost', 'resGrandTotal', 'resTotalPagesAuto', 'resBillableColorAuto', 'resTotalBWAuto', 'resColorFilesAuto', 'resBWFilesAuto', 'resColorCostAuto', 'resBWCostAuto', 'resGrandTotalAuto', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice'];
+    const ids = ['dropZone', 'fileInput', 'btnTotalPages', 'btnColorPages', 'btnDownloadColor', 'btnDownloadBW', 'btnDownloadCSV', 'btnClear', 'resultsTable', 'resultsBody', 'resultsFooter', 'summarySection', 'resTotalPages', 'resBillableColor', 'resTotalBW', 'resColorFiles', 'resBWFiles', 'resColorCost', 'resBWCost', 'resGrandTotal', 'resTotalPagesAuto', 'resBillableColorAuto', 'resTotalBWAuto', 'resColorFilesAuto', 'resBWFilesAuto', 'resColorCostAuto', 'resBWCostAuto', 'resGrandTotalAuto', 'footTotalPages', 'footSigColor', 'footAnyColor', 'footBillable', 'colorPrice', 'bwPrice'];
     console.log("--- DOM ELEMENT CHECK ---");
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -162,6 +163,7 @@ function updateButtons() {
     if (btnColorPages) btnColorPages.disabled = !hasFiles || isProcessing;
     if (btnDownloadColor) btnDownloadColor.disabled = !canDownload;
     if (btnDownloadBW) btnDownloadBW.disabled = !canDownload;
+    if (btnDownloadCSV) btnDownloadCSV.disabled = !canDownload;
     if (btnClear)    btnClear.disabled = !hasFiles || isProcessing;
 }
 
@@ -610,3 +612,26 @@ async function downloadZip(type) {
 
 btnDownloadColor.addEventListener('click', () => downloadZip('COLOR'));
 btnDownloadBW.addEventListener('click', () => downloadZip('BW'));
+
+async function downloadCSV() {
+    let csv = 'FileName,Total Pages,Color Pages (To Print),Any Color Pages,Billable Color,Notes\n';
+    
+    for (const f of files) {
+        const job = jobResults[f.id];
+        const billableCount = (job.colorPages > 0) ? (job.anyColorPages || 0) : 0;
+        
+        // Wrap notes and path in quotes to handle commas
+        const note = job.note ? `"${job.note}"` : '';
+        const path = `"${job.path}"`;
+        
+        csv += `${path},${job.totalPages || 0},${job.colorPages || 0},${job.anyColorPages || 0},${billableCount},${note}\n`;
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `PDF_Color_Analysis_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+
+btnDownloadCSV.addEventListener('click', downloadCSV);
